@@ -25,6 +25,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
+# Import Rosa Tools
+from tools import WebSearchTool, LocalKnowledgeBaseTool, PersistentMemoryTool
+
 # Load environment variables
 load_dotenv()
 
@@ -55,6 +58,11 @@ class HybridRouter:
     """
     
     def __init__(self):
+        # Initialize Tools
+        self.web_search = WebSearchTool()
+        self.local_kb = LocalKnowledgeBaseTool()
+        self.memory = PersistentMemoryTool()
+
         # Cloud Brain (OpenRouter) client
         self.cloud_client = AsyncOpenAI(
             base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
