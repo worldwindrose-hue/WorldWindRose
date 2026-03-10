@@ -144,7 +144,7 @@ class PromptInjectionDefense:
         This clearly separates external data from system instructions.
         """
         # Escape any markdown that could be interpreted as instructions
-        sanitized = content.replace("```", "`\`\`")
+        sanitized = content.replace("```", r"`\`\`")
         
         # Wrap in delimiters
         return (
