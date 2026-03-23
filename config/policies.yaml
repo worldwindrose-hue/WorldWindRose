@@ -1,0 +1,62 @@
+# ROSA OS — Safety Policies
+# These rules are enforced by core/policies.py
+# Red zones require explicit owner confirmation before execution.
+
+version: "1.0"
+
+# Actions that are ALWAYS forbidden (no confirmation possible)
+forbidden:
+  commands:
+    - "rm -rf /"
+    - "rm -rf ~"
+    - "dd if=/dev/zero"
+    - "mkfs"
+    - ":(){ :|:& };:"   # fork bomb
+  operations:
+    - "drop_database"
+    - "wipe_memory_all"
+    - "expose_api_keys"
+
+# Actions that require explicit owner confirmation ("yes" in chat)
+red_zones:
+  file_operations:
+    - "delete"
+    - "overwrite"
+    - "truncate"
+  system:
+    - "chmod"
+    - "chown"
+    - "sudo"
+    - "systemctl"
+  network:
+    - "mass_request"      # >10 requests to same domain
+    - "exfiltrate_data"
+  financial:
+    - "payment"
+    - "wallet"
+    - "transfer"
+    - "purchase"
+  communication:
+    - "mass_email"
+    - "bulk_message"
+    - "reply_all"
+
+# Self-improvement constraints
+self_improvement:
+  # Patches go to experimental/ first, NEVER auto-applied
+  sandbox_dir: "experimental"
+  # Owner must explicitly POST /api/self-improve/{id}/apply to apply a patch
+  require_explicit_apply: true
+  # Maximum patches queued without review
+  max_pending_patches: 10
+
+# Logging
+logging:
+  # Log all actions at or above this level
+  min_severity: "info"
+  # Always log these event types regardless of severity
+  always_log:
+    - "security_alert"
+    - "red_zone_triggered"
+    - "patch_proposed"
+    - "patch_applied"

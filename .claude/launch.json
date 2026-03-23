@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ROSA Core (FastAPI)",
+      "runtimeExecutable": "uvicorn",
+      "runtimeArgs": ["core.app:app", "--reload", "--port", "8000"],
+      "port": 8000
+    }
+  ]
+}

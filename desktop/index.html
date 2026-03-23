@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ROSA OS</title>
+  <link rel="stylesheet" href="/app/style.css" />
+</head>
+<body>
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="logo">🌹 ROSA OS</span>
+        <button id="theme-toggle" class="icon-btn" title="Toggle theme">☀️</button>
+      </div>
+
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-panel="chat">Chat</button>
+        <button class="nav-tab" data-panel="tasks">Tasks</button>
+        <button class="nav-tab" data-panel="reflections">Reflections</button>
+        <button class="nav-tab" data-panel="settings">Settings</button>
+      </nav>
+
+      <div class="connection-status">
+        <span id="status-dot" class="dot disconnected"></span>
+        <span id="status-text">Connecting…</span>
+      </div>
+    </aside>
+
+    <!-- Main panels -->
+    <main class="main">
+
+      <!-- CHAT panel -->
+      <div id="panel-chat" class="panel active">
+        <div class="panel-header">
+          <h2>Chat with Rosa</h2>
+          <div class="mode-selector">
+            <label>Mode:</label>
+            <select id="chat-mode">
+              <option value="">Auto</option>
+              <option value="cloud">Cloud (Kimi)</option>
+              <option value="local">Local (Ollama)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="messages" class="messages"></div>
+
+        <form id="chat-form" class="chat-form">
+          <textarea
+            id="chat-input"
+            placeholder="Message Rosa…"
+            rows="1"
+            autofocus
+          ></textarea>
+          <button type="submit" class="send-btn">Send</button>
+        </form>
+      </div>
+
+      <!-- TASKS panel -->
+      <div id="panel-tasks" class="panel">
+        <div class="panel-header">
+          <h2>Tasks</h2>
+          <button id="new-task-btn" class="btn-primary">+ New Task</button>
+        </div>
+
+        <div id="new-task-form" class="new-task-form hidden">
+          <input type="text" id="task-description" placeholder="Task description…" />
+          <button id="create-task-btn" class="btn-primary">Create</button>
+          <button id="cancel-task-btn" class="btn-ghost">Cancel</button>
+        </div>
+
+        <div id="tasks-list" class="tasks-list">
+          <p class="empty-state">Loading tasks…</p>
+        </div>
+      </div>
+
+      <!-- REFLECTIONS panel -->
+      <div id="panel-reflections" class="panel">
+        <div class="panel-header">
+          <h2>Reflections</h2>
+          <button id="run-improve-btn" class="btn-secondary">Run Improvement Cycle</button>
+        </div>
+        <div id="reflections-list" class="reflections-list">
+          <p class="empty-state">Loading reflections…</p>
+        </div>
+      </div>
+
+      <!-- SETTINGS panel -->
+      <div id="panel-settings" class="panel">
+        <div class="panel-header"><h2>Settings</h2></div>
+        <div class="settings-form">
+          <label>
+            Default Model
+            <select id="setting-model">
+              <option value="">Auto (from server)</option>
+              <option value="cloud">Cloud — Kimi K2.5</option>
+              <option value="local">Local — Ollama</option>
+            </select>
+          </label>
+
+          <label>
+            Server URL
+            <input type="text" id="setting-server" value="http://localhost:8000" />
+          </label>
+
+          <button id="save-settings-btn" class="btn-primary">Save</button>
+
+          <div class="divider"></div>
+          <h3>About ROSA OS</h3>
+          <p class="about-text">
+            ROSA OS v1.0.0 — Hybrid AI assistant platform.<br/>
+            Brain: Kimi K2.5 via OpenRouter.<br/>
+            Builder: Claude Code.<br/>
+            <a href="/docs" target="_blank">Documentation</a>
+          </p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="/app/app.js"></script>
+</body>
+</html>

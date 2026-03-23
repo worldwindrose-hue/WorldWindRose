@@ -1,0 +1,33 @@
+# ROSA OS — Default Settings
+# All values can be overridden via environment variables (.env)
+
+version: "1.0"
+
+models:
+  cloud_default: "moonshotai/kimi-k2.5"
+  cloud_fallback: "anthropic/claude-3.5-sonnet"
+  local_default: "llama3.2"
+  openrouter_base_url: "https://openrouter.ai/api/v1"
+  ollama_base_url: "http://localhost:11434"
+
+server:
+  host: "127.0.0.1"
+  port: 8000
+  reload: true
+
+memory:
+  db_path: "memory/rosa.db"
+  max_conversation_turns: 50    # per session
+  max_reflections_returned: 20
+
+self_improvement:
+  enabled: true
+  # How many recent tasks to analyze per cycle
+  lookback_tasks: 50
+  # Minimum failures before triggering analysis
+  min_failures_threshold: 3
+
+security:
+  require_confirmation: true
+  allow_file_operations: false
+  injection_defense: true

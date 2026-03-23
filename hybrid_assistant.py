@@ -25,8 +25,16 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-# Import Rosa Tools
-from tools import WebSearchTool, LocalKnowledgeBaseTool, PersistentMemoryTool
+# Import Rosa Tools (implemented in tools.py)
+try:
+    from tools import WebSearchTool, LocalKnowledgeBaseTool, PersistentMemoryTool
+except ImportError:
+    class WebSearchTool:  # type: ignore
+        pass
+    class LocalKnowledgeBaseTool:  # type: ignore
+        pass
+    class PersistentMemoryTool:  # type: ignore
+        pass
 
 # Load environment variables
 load_dotenv()
