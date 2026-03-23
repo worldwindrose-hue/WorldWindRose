@@ -2,6 +2,7 @@
 ROSA OS — Self-improvement API.
 POST /api/self-improve/run          — trigger one improvement cycle
 GET  /api/self-improve/proposals    — list pending proposals
+GET  /api/self-improve/events       — list recent events (filterable by severity)
 POST /api/self-improve/{id}/apply   — apply a proposal (requires confirmation)
 """
 
@@ -21,6 +22,15 @@ class ProposalOut(BaseModel):
     summary: str
     created_at: str
     applied: bool
+
+
+class EventOut(BaseModel):
+    id: str
+    event_type: str
+    description: str
+    severity: str
+    task_id: str | None
+    created_at: str
 
 
 @router.post("/run")
@@ -60,6 +70,25 @@ async def run_improvement_cycle() -> dict:
     except Exception as exc:
         logger.error("Self-improvement cycle failed: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/events", response_model=list[EventOut])
+async def list_events(severity: str | None = None, limit: int = 50) -> list[EventOut]:
+    """List recent events, optionally filtered by severity (info/warning/high/critical)."""
+    from core.memory.store import get_store
+    store = await get_store()
+    events = await store.list_events(severity=severity, limit=limit)
+    return [
+        EventOut(
+            id=e.id,
+            event_type=e.event_type,
+            description=e.description,
+            severity=e.severity,
+            task_id=e.task_id,
+            created_at=e.created_at.isoformat(),
+        )
+        for e in events
+    ]
 
 
 @router.get("/proposals", response_model=list[ProposalOut])

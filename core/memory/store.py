@@ -12,7 +12,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import select, desc, and_
 
-from core.memory.models import Base, Task, Event, Reflection, ConversationTurn
+from core.memory.models import Base, Task, Event, Reflection, ConversationTurn, Folder, ChatSession, UploadedFile
 
 logger = logging.getLogger("rosa.memory.store")
 
@@ -210,6 +210,168 @@ class MemoryStore:
             await session.commit()
             await session.refresh(reflection)
         return reflection
+
+    # ── Folders ─────────────────────────────────────────────────────────────
+
+    async def create_folder(self, name: str) -> Folder:
+        folder = Folder(name=name)
+        async with self._sf() as session:
+            session.add(folder)
+            await session.commit()
+            await session.refresh(folder)
+        return folder
+
+    async def list_folders(self) -> list[Folder]:
+        async with self._sf() as session:
+            result = await session.execute(select(Folder).order_by(Folder.name))
+            return list(result.scalars().all())
+
+    async def rename_folder(self, folder_id: str, name: str) -> Folder | None:
+        async with self._sf() as session:
+            folder = await session.get(Folder, folder_id)
+            if folder is None:
+                return None
+            folder.name = name
+            await session.commit()
+            await session.refresh(folder)
+        return folder
+
+    async def delete_folder(self, folder_id: str) -> bool:
+        """Delete folder and unassign its sessions (sessions are kept)."""
+        async with self._sf() as session:
+            # Unassign sessions from this folder
+            stmt = select(ChatSession).where(ChatSession.folder_id == folder_id)
+            result = await session.execute(stmt)
+            for s in result.scalars().all():
+                s.folder_id = None
+            folder = await session.get(Folder, folder_id)
+            if folder is None:
+                return False
+            await session.delete(folder)
+            await session.commit()
+        return True
+
+    # ── Chat Sessions ────────────────────────────────────────────────────────
+
+    async def create_session(self, title: str = "New chat", folder_id: str | None = None) -> ChatSession:
+        s = ChatSession(title=title, folder_id=folder_id)
+        async with self._sf() as session:
+            session.add(s)
+            await session.commit()
+            await session.refresh(s)
+        return s
+
+    async def list_sessions(self, folder_id: str | None = None, limit: int = 100) -> list[ChatSession]:
+        async with self._sf() as session:
+            stmt = select(ChatSession).order_by(desc(ChatSession.updated_at)).limit(limit)
+            if folder_id is not None:
+                stmt = stmt.where(ChatSession.folder_id == folder_id)
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    async def get_session(self, session_id: str) -> ChatSession | None:
+        async with self._sf() as session:
+            return await session.get(ChatSession, session_id)
+
+    async def update_session(
+        self,
+        session_id: str,
+        title: str | None = None,
+        folder_id: str | None = None,
+        clear_folder: bool = False,
+    ) -> ChatSession | None:
+        async with self._sf() as session:
+            s = await session.get(ChatSession, session_id)
+            if s is None:
+                return None
+            if title is not None:
+                s.title = title
+            if clear_folder:
+                s.folder_id = None
+            elif folder_id is not None:
+                s.folder_id = folder_id
+            await session.commit()
+            await session.refresh(s)
+        return s
+
+    async def delete_session(self, session_id: str) -> bool:
+        """Delete a session and all its conversation turns."""
+        async with self._sf() as session:
+            # Delete turns
+            stmt = select(ConversationTurn).where(ConversationTurn.session_id == session_id)
+            result = await session.execute(stmt)
+            for turn in result.scalars().all():
+                await session.delete(turn)
+            s = await session.get(ChatSession, session_id)
+            if s is None:
+                return False
+            await session.delete(s)
+            await session.commit()
+        return True
+
+    async def list_turns_by_session(self, session_id: str, limit: int = 200) -> list[ConversationTurn]:
+        """Chronological turns for a session (oldest first for display)."""
+        async with self._sf() as session:
+            stmt = (
+                select(ConversationTurn)
+                .where(ConversationTurn.session_id == session_id)
+                .order_by(ConversationTurn.created_at)
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    async def get_last_turn(self, session_id: str) -> ConversationTurn | None:
+        """Get the most recent turn in a session (for sidebar preview)."""
+        async with self._sf() as session:
+            stmt = (
+                select(ConversationTurn)
+                .where(ConversationTurn.session_id == session_id)
+                .order_by(desc(ConversationTurn.created_at))
+                .limit(1)
+            )
+            result = await session.execute(stmt)
+            return result.scalars().first()
+
+    # ── Uploaded Files ───────────────────────────────────────────────────────
+
+    async def save_file(
+        self,
+        filename: str,
+        content_type: str,
+        size: int,
+        extracted_text: str | None,
+        session_id: str | None = None,
+        needs_vision: bool = False,
+    ) -> UploadedFile:
+        f = UploadedFile(
+            filename=filename,
+            content_type=content_type,
+            size=size,
+            extracted_text=extracted_text,
+            session_id=session_id,
+            needs_vision=needs_vision,
+        )
+        async with self._sf() as session:
+            session.add(f)
+            await session.commit()
+            await session.refresh(f)
+        return f
+
+    # ── Events (extended) ────────────────────────────────────────────────────
+
+    async def list_events(
+        self,
+        severity: str | None = None,
+        limit: int = 50,
+    ) -> list[Event]:
+        """List events, optionally filtered by severity."""
+        async with self._sf() as session:
+            stmt = select(Event).order_by(desc(Event.created_at)).limit(limit)
+            if severity:
+                stmt = stmt.where(Event.severity == severity)
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
 
 
 # Module-level singleton

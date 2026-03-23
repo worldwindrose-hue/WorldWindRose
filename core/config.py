@@ -46,8 +46,14 @@ class Settings(BaseSettings):
     self_improvement_lookback: int = 50
     self_improvement_min_failures: int = 3
 
+    # Voice (optional — for Whisper + TTS via OpenAI directly)
+    openai_direct_key: str = ""
+
+    # File uploads
+    upload_dir: str = "memory/uploads"
+
     # App
-    app_version: str = "1.0.0"
+    app_version: str = "2.0.0"
     debug: bool = False
 
 

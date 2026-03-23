@@ -23,6 +23,11 @@ from core.api.chat import router as chat_router
 from core.api.tasks import router as tasks_router
 from core.api.memory import router as memory_router
 from core.api.self_improve import router as self_improve_router
+from core.api.sessions import router as sessions_router
+from core.api.folders import router as folders_router
+from core.api.files import router as files_router
+from core.api.voice import router as voice_router
+from core.api.parse_url import router as parse_url_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,6 +50,9 @@ async def lifespan(app: FastAPI):
     from core.memory.store import init_db
     await init_db()
     logger.info("Memory database initialized at %s", settings.db_path)
+
+    # Ensure upload directory exists
+    Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
 
     yield
 
@@ -75,6 +83,11 @@ def create_app() -> FastAPI:
     app.include_router(tasks_router)
     app.include_router(memory_router)
     app.include_router(self_improve_router)
+    app.include_router(sessions_router)
+    app.include_router(folders_router)
+    app.include_router(files_router)
+    app.include_router(voice_router)
+    app.include_router(parse_url_router)
 
     # Health check
     @app.get("/health", tags=["system"])

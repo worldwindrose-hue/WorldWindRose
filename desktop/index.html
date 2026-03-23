@@ -7,121 +7,213 @@
   <link rel="stylesheet" href="/app/style.css" />
 </head>
 <body>
-  <div class="layout">
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <span class="logo">🌹 ROSA OS</span>
-        <button id="theme-toggle" class="icon-btn" title="Toggle theme">☀️</button>
+<div class="layout">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo">🌹 <span>ROSA OS</span></div>
+      <button id="new-chat-btn" class="btn-new-chat" title="New chat (Ctrl+N)">
+        <span class="icon">✏️</span> New chat
+      </button>
+      <div class="search-wrap">
+        <input id="session-search" type="text" placeholder="Search chats…" autocomplete="off" />
       </div>
+    </div>
 
-      <nav class="nav-tabs">
-        <button class="nav-tab active" data-panel="chat">Chat</button>
-        <button class="nav-tab" data-panel="tasks">Tasks</button>
-        <button class="nav-tab" data-panel="reflections">Reflections</button>
-        <button class="nav-tab" data-panel="settings">Settings</button>
-      </nav>
+    <!-- Folders + Session list -->
+    <div class="sidebar-sessions" id="sidebar-sessions">
+      <!-- rendered by JS -->
+    </div>
 
-      <div class="connection-status">
+    <!-- Bottom nav -->
+    <div class="sidebar-bottom">
+      <button class="bottom-nav-btn active" data-view="chat" title="Chat">
+        💬 <span>Chat</span>
+      </button>
+      <button class="bottom-nav-btn" data-view="selfimprove" title="Self-Improve">
+        🔬 <span>Improve</span>
+      </button>
+      <button class="bottom-nav-btn" data-view="settings" title="Settings">
+        ⚙️ <span>Settings</span>
+      </button>
+      <div class="status-pill">
         <span id="status-dot" class="dot disconnected"></span>
-        <span id="status-text">Connecting…</span>
+        <span id="status-text">…</span>
       </div>
-    </aside>
+    </div>
+  </aside>
 
-    <!-- Main panels -->
-    <main class="main">
+  <!-- ── WORKSPACE ────────────────────────────────────────────────── -->
+  <main class="workspace">
 
-      <!-- CHAT panel -->
-      <div id="panel-chat" class="panel active">
-        <div class="panel-header">
-          <h2>Chat with Rosa</h2>
-          <div class="mode-selector">
-            <label>Mode:</label>
-            <select id="chat-mode">
-              <option value="">Auto</option>
-              <option value="cloud">Cloud (Kimi)</option>
-              <option value="local">Local (Ollama)</option>
-            </select>
+    <!-- CHAT VIEW -->
+    <div id="view-chat" class="view active">
+      <div class="chat-header">
+        <div class="chat-title-wrap">
+          <span id="chat-title" class="chat-title" contenteditable="false" spellcheck="false">New chat</span>
+          <button id="rename-btn" class="icon-btn-sm" title="Rename">✏️</button>
+        </div>
+        <div class="chat-meta">
+          <span id="model-badge" class="badge badge-model">auto</span>
+          <span id="mode-badge" class="badge badge-mode">kimi</span>
+        </div>
+      </div>
+
+      <div id="messages" class="messages">
+        <div class="welcome-screen">
+          <div class="welcome-logo">🌹</div>
+          <h2>ROSA OS</h2>
+          <p>Hybrid AI assistant powered by Kimi K2.5</p>
+          <div class="welcome-hints">
+            <div class="hint-chip">📎 Attach files</div>
+            <div class="hint-chip">🌐 Parse URLs</div>
+            <div class="hint-chip">🎤 Voice input</div>
+            <div class="hint-chip">⚡ Live mode</div>
           </div>
         </div>
+      </div>
 
-        <div id="messages" class="messages"></div>
-
-        <form id="chat-form" class="chat-form">
+      <!-- Input bar -->
+      <div class="input-area">
+        <!-- File chips -->
+        <div id="file-chips" class="file-chips hidden"></div>
+        <!-- URL input row -->
+        <div id="url-row" class="url-row hidden">
+          <input id="url-input" type="url" placeholder="https://…" autocomplete="off" />
+          <button id="url-fetch-btn" class="btn-fetch">Fetch</button>
+          <button id="url-close-btn" class="icon-btn-sm">✕</button>
+        </div>
+        <div class="input-row">
+          <div class="input-tools">
+            <button id="attach-btn" class="tool-btn" title="Attach file (Ctrl+U)">📎</button>
+            <button id="voice-btn" class="tool-btn" title="Voice input (Ctrl+M)">🎤</button>
+            <button id="url-btn"   class="tool-btn" title="Parse URL (Ctrl+L)">🌐</button>
+            <button id="live-btn"  class="tool-btn" title="Live mode (Ctrl+Shift+L)">⚡</button>
+          </div>
           <textarea
             id="chat-input"
-            placeholder="Message Rosa…"
+            placeholder="Message Rosa… (Enter to send, Shift+Enter for newline)"
             rows="1"
             autofocus
           ></textarea>
-          <button type="submit" class="send-btn">Send</button>
-        </form>
-      </div>
-
-      <!-- TASKS panel -->
-      <div id="panel-tasks" class="panel">
-        <div class="panel-header">
-          <h2>Tasks</h2>
-          <button id="new-task-btn" class="btn-primary">+ New Task</button>
-        </div>
-
-        <div id="new-task-form" class="new-task-form hidden">
-          <input type="text" id="task-description" placeholder="Task description…" />
-          <button id="create-task-btn" class="btn-primary">Create</button>
-          <button id="cancel-task-btn" class="btn-ghost">Cancel</button>
-        </div>
-
-        <div id="tasks-list" class="tasks-list">
-          <p class="empty-state">Loading tasks…</p>
-        </div>
-      </div>
-
-      <!-- REFLECTIONS panel -->
-      <div id="panel-reflections" class="panel">
-        <div class="panel-header">
-          <h2>Reflections</h2>
-          <button id="run-improve-btn" class="btn-secondary">Run Improvement Cycle</button>
-        </div>
-        <div id="reflections-list" class="reflections-list">
-          <p class="empty-state">Loading reflections…</p>
-        </div>
-      </div>
-
-      <!-- SETTINGS panel -->
-      <div id="panel-settings" class="panel">
-        <div class="panel-header"><h2>Settings</h2></div>
-        <div class="settings-form">
-          <label>
-            Default Model
-            <select id="setting-model">
-              <option value="">Auto (from server)</option>
-              <option value="cloud">Cloud — Kimi K2.5</option>
-              <option value="local">Local — Ollama</option>
+          <div class="mode-wrap">
+            <select id="chat-mode" title="Routing mode">
+              <option value="">Auto</option>
+              <option value="cloud">Cloud</option>
+              <option value="local">Local</option>
             </select>
-          </label>
+            <button id="send-btn" class="send-btn" title="Send (Enter)">↑</button>
+          </div>
+        </div>
+      </div>
 
-          <label>
-            Server URL
+      <!-- Hidden file input -->
+      <input type="file" id="file-input" multiple accept="*/*" style="display:none" />
+    </div><!-- /view-chat -->
+
+    <!-- SELF-IMPROVE VIEW -->
+    <div id="view-selfimprove" class="view">
+      <div class="view-header">
+        <h2>🔬 Self-Improvement</h2>
+        <div class="view-header-actions">
+          <button id="run-cycle-btn" class="btn-primary">Run Cycle</button>
+        </div>
+      </div>
+
+      <div class="improve-layout">
+        <!-- Events column -->
+        <div class="improve-col">
+          <div class="col-header">
+            <h3>Recent Events</h3>
+            <select id="event-severity-filter">
+              <option value="">All severities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="warning">Warning</option>
+              <option value="info">Info</option>
+            </select>
+          </div>
+          <div id="events-list" class="events-list">
+            <p class="empty-state">Loading events…</p>
+          </div>
+        </div>
+
+        <!-- Proposals column -->
+        <div class="improve-col">
+          <div class="col-header">
+            <h3>Proposals</h3>
+            <button id="refresh-proposals-btn" class="btn-ghost">↻ Refresh</button>
+          </div>
+          <div id="proposals-list" class="proposals-list">
+            <p class="empty-state">Loading proposals…</p>
+          </div>
+        </div>
+      </div>
+    </div><!-- /view-selfimprove -->
+
+    <!-- SETTINGS VIEW -->
+    <div id="view-settings" class="view">
+      <div class="view-header"><h2>⚙️ Settings</h2></div>
+      <div class="settings-body">
+        <section class="settings-section">
+          <h3>Connection</h3>
+          <label>Server URL
             <input type="text" id="setting-server" value="http://localhost:8000" />
           </label>
-
-          <button id="save-settings-btn" class="btn-primary">Save</button>
-
-          <div class="divider"></div>
-          <h3>About ROSA OS</h3>
-          <p class="about-text">
-            ROSA OS v1.0.0 — Hybrid AI assistant platform.<br/>
-            Brain: Kimi K2.5 via OpenRouter.<br/>
-            Builder: Claude Code.<br/>
-            <a href="/docs" target="_blank">Documentation</a>
-          </p>
+        </section>
+        <section class="settings-section">
+          <h3>Model</h3>
+          <label>Default routing mode
+            <select id="setting-mode">
+              <option value="">Auto (smart routing)</option>
+              <option value="cloud">Always Cloud — Kimi K2.5</option>
+              <option value="local">Always Local — Ollama</option>
+            </select>
+          </label>
+        </section>
+        <section class="settings-section">
+          <h3>Appearance</h3>
+          <label>Theme
+            <select id="setting-theme">
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </label>
+        </section>
+        <section class="settings-section">
+          <h3>Folders</h3>
+          <div id="folder-manager" class="folder-manager"></div>
+          <button id="add-folder-btn" class="btn-secondary">+ New folder</button>
+        </section>
+        <button id="save-settings-btn" class="btn-primary">Save settings</button>
+        <div class="settings-about">
+          <strong>ROSA OS v2.0.0</strong><br/>
+          Brain: Kimi K2.5 via OpenRouter<br/>
+          Builder: Claude Code<br/>
+          Future: Perplexity Computer integration<br/>
+          <a href="/docs/CONSTITUTION.md" target="_blank">Constitution</a> ·
+          <a href="/api/docs" target="_blank">API docs</a>
         </div>
       </div>
+    </div><!-- /view-settings -->
 
-    </main>
+  </main>
+</div>
+
+<!-- Confirmation modal -->
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="modal-title">Confirm</h3>
+    <p id="modal-body"></p>
+    <div class="modal-actions">
+      <button id="modal-cancel" class="btn-ghost">Cancel</button>
+      <button id="modal-confirm" class="btn-danger">Confirm</button>
+    </div>
   </div>
+</div>
 
-  <script src="/app/app.js"></script>
+<script src="/app/app.js"></script>
 </body>
 </html>
