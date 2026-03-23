@@ -76,10 +76,12 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
 
 @router.websocket("/ws/chat")
-async def ws_chat(websocket: WebSocket) -> None:
+async def ws_chat(websocket: WebSocket, session_id: str | None = None) -> None:
     """WebSocket chat endpoint — real-time streaming responses."""
     await websocket.accept()
-    session_id = str(uuid.uuid4())
+    # Reuse session_id from query param if supplied by the client
+    if not session_id:
+        session_id = str(uuid.uuid4())
     rosa = get_router()
 
     await websocket.send_json({"type": "connected", "session_id": session_id})
@@ -134,11 +136,14 @@ async def ws_chat(websocket: WebSocket) -> None:
 
             except Exception as exc:
                 logger.error("Chat error: %s", exc)
-                await websocket.send_json({
-                    "type": "error",
-                    "message": f"Error processing message: {exc}",
-                    "session_id": session_id,
-                })
+                try:
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": f"Error processing message: {exc}",
+                        "session_id": session_id,
+                    })
+                except Exception:
+                    pass  # connection already closed, nothing to do
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected: session=%s", session_id)

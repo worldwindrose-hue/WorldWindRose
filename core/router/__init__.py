@@ -78,14 +78,26 @@ You are running inside ROSA OS. The owner can see your reasoning. Be honest."""
                 "session_id": session_id,
             }
         else:
-            result = await self._router.process_task(message)
-            classification: TaskClassification = result.get("classification")
+            # Auto mode: classify task but default to cloud (Kimi K2.5) for everything
+            # except explicitly private local-file tasks.
+            classification: TaskClassification = self._router.classify_task(message)
+            use_local = classification.task_type == TaskType.PRIVATE_FILE
+
+            if use_local:
+                response = await self._router.route_to_local_brain(message)
+                brain_used = "local"
+                model = self._router.local_model
+            else:
+                response = await self._router.route_to_cloud_brain(message, cloud_system_prompt)
+                brain_used = "cloud"
+                model = self._router.cloud_model
+
             return {
-                "response": result["response"],
-                "brain_used": result["brain_used"],
-                "model": result["model"],
-                "task_type": classification.task_type.value if classification else "unknown",
-                "confidence": classification.confidence if classification else 0.0,
+                "response": response,
+                "brain_used": brain_used,
+                "model": model,
+                "task_type": classification.task_type.value,
+                "confidence": classification.confidence,
                 "session_id": session_id,
             }
 

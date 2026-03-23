@@ -165,6 +165,14 @@ function wsConnect() {
       finalizeStream(data.model, data.mode);
       state.sending = false;
       setSending(false);
+    } else if (data.type === "response") {
+      // Non-streaming full response from server
+      appendStreamToken(data.response || "");
+      finalizeStream(data.model, data.brain_used);
+      state.sending = false;
+      setSending(false);
+    } else if (data.type === "thinking") {
+      // Already showing stream cursor — nothing extra needed
     } else if (data.type === "error") {
       appendErrorBubble(data.message || "Неизвестная ошибка");
       state.sending = false;
