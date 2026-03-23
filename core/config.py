@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     upload_dir: str = "memory/uploads"
 
     # App
-    app_version: str = "2.0.0"
+    app_version: str = "3.0.0"
     debug: bool = False
 
 

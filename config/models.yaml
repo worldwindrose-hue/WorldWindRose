@@ -1,0 +1,105 @@
+# ROSA OS v3 — Model Pantheon Configuration
+# Each model entry describes capabilities, cost tier, and enable/disable flag.
+# Disabled models (enabled: false) are shown in the UI but not called.
+
+models:
+  kimi_k2_5:
+    provider: openrouter
+    model_id: moonshotai/kimi-k2.5
+    display_name: "Kimi K2.5"
+    icon: "🌙"
+    strengths: [reasoning, coding, long_context, russian, analysis]
+    context_window: 131072
+    cost_tier: medium
+    enabled: true
+    notes: "Rosa's primary brain — strong Russian support, long context"
+
+  claude_sonnet:
+    provider: openrouter
+    model_id: anthropic/claude-3.5-sonnet
+    display_name: "Claude 3.5 Sonnet"
+    icon: "🤖"
+    strengths: [coding, analysis, safety, instructions, structured_output]
+    context_window: 200000
+    cost_tier: high
+    enabled: true
+    notes: "Excellent for code review, structured tasks, and debate synthesis"
+
+  gemini_flash:
+    provider: openrouter
+    model_id: google/gemini-flash-1.5
+    display_name: "Gemini Flash 1.5"
+    icon: "✨"
+    strengths: [speed, vision, long_context, multimodal]
+    context_window: 1000000
+    cost_tier: low
+    enabled: false
+    env_key: OPENROUTER_API_KEY
+    notes: "Ultra-fast, good for image analysis and long document processing"
+
+  gpt_4o:
+    provider: openrouter
+    model_id: openai/gpt-4o
+    display_name: "GPT-4o"
+    icon: "🟢"
+    strengths: [vision, coding, general, tool_use]
+    context_window: 128000
+    cost_tier: high
+    enabled: false
+    env_key: OPENROUTER_API_KEY
+    notes: "OpenAI flagship — strong vision and tool calling"
+
+  grok_3:
+    provider: openrouter
+    model_id: x-ai/grok-3
+    display_name: "Grok 3"
+    icon: "⚡"
+    strengths: [reasoning, realtime, humor]
+    context_window: 131072
+    cost_tier: high
+    enabled: false
+    env_key: OPENROUTER_API_KEY
+    notes: "xAI model — real-time internet access, strong reasoning"
+
+  perplexity_sonar:
+    provider: openrouter
+    model_id: perplexity/sonar-pro
+    display_name: "Perplexity Sonar Pro"
+    icon: "🔍"
+    strengths: [search, web, citations, research]
+    context_window: 28000
+    cost_tier: medium
+    enabled: false
+    env_key: OPENROUTER_API_KEY
+    notes: "Search-augmented — great for current events and research with citations"
+
+  llama3_local:
+    provider: ollama
+    model_id: llama3.2
+    display_name: "Llama 3.2 (Local)"
+    icon: "🦙"
+    strengths: [privacy, offline, speed, general]
+    context_window: 128000
+    cost_tier: free
+    enabled: true
+    notes: "Local model via Ollama — zero cost, full privacy, no internet needed"
+
+# Routing strategies determine which models to use and how to combine them.
+routing_strategies:
+  fast:
+    description: "Быстро и дёшево — одна модель"
+    primary: kimi_k2_5
+    max_models: 1
+
+  quality:
+    description: "Максимальное качество — дебаты двух моделей"
+    primary: kimi_k2_5
+    secondary: claude_sonnet
+    synthesizer: kimi_k2_5
+    max_models: 2
+
+  privacy:
+    description: "Минимум облака — локальная или Kimi"
+    primary: llama3_local
+    fallback: kimi_k2_5
+    max_models: 1

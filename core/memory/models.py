@@ -108,3 +108,57 @@ class UploadedFile(Base):
     needs_vision: Mapped[bool] = mapped_column(Boolean, default=False)
     session_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("chat_sessions.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+# ── v3 models (Knowledge Graph + Skills) ─────────────────────────────────────
+
+from sqlalchemy import Float  # noqa: E402 — grouped import
+
+
+class KnowledgeNode(Base):
+    """A node in the knowledge graph — an insight, entity, concept, or fact."""
+    __tablename__ = "knowledge_nodes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    type: Mapped[str] = mapped_column(String(32), default="insight")   # insight|entity|concept|fact
+    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_type: Mapped[str] = mapped_column(String(32), default="manual")  # manual|dialog|file|url
+    source_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class KnowledgeEdge(Base):
+    """A directed edge in the knowledge graph, linking two nodes."""
+    __tablename__ = "knowledge_edges"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    from_node_id: Mapped[str] = mapped_column(String(36), ForeignKey("knowledge_nodes.id"), nullable=False)
+    to_node_id: Mapped[str] = mapped_column(String(36), ForeignKey("knowledge_nodes.id"), nullable=False)
+    relation_type: Mapped[str] = mapped_column(String(64), default="related_to")
+    weight: Mapped[float] = mapped_column(Float, default=1.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Skill(Base):
+    """A skill/capability area that Rosa tracks and improves."""
+    __tablename__ = "skills"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class SkillProgress(Base):
+    """A snapshot assessment of Rosa's skill level at a point in time."""
+    __tablename__ = "skill_progress"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    skill_id: Mapped[str] = mapped_column(String(36), ForeignKey("skills.id"), nullable=False)
+    level: Mapped[float] = mapped_column(Float, default=1.0)    # 1.0 – 5.0
+    goal: Mapped[float] = mapped_column(Float, default=5.0)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    assessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    assessed_by: Mapped[str] = mapped_column(String(32), default="auto")  # auto|owner

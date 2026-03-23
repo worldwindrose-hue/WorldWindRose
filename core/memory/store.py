@@ -12,7 +12,11 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import select, desc, and_
 
-from core.memory.models import Base, Task, Event, Reflection, ConversationTurn, Folder, ChatSession, UploadedFile
+from core.memory.models import (
+    Base, Task, Event, Reflection, ConversationTurn,
+    Folder, ChatSession, UploadedFile,
+    KnowledgeNode, KnowledgeEdge, Skill, SkillProgress,
+)
 
 logger = logging.getLogger("rosa.memory.store")
 
@@ -372,6 +376,155 @@ class MemoryStore:
                 stmt = stmt.where(Event.severity == severity)
             result = await session.execute(stmt)
             return list(result.scalars().all())
+
+
+    # ── Knowledge Graph ──────────────────────────────────────────────────────
+
+    async def create_node(
+        self,
+        title: str,
+        type: str = "insight",
+        summary: str | None = None,
+        source_type: str = "manual",
+        source_id: str | None = None,
+    ) -> KnowledgeNode:
+        node = KnowledgeNode(
+            title=title,
+            type=type,
+            summary=summary,
+            source_type=source_type,
+            source_id=source_id,
+        )
+        async with self._sf() as session:
+            session.add(node)
+            await session.commit()
+            await session.refresh(node)
+        return node
+
+    async def get_node(self, node_id: str) -> KnowledgeNode | None:
+        async with self._sf() as session:
+            return await session.get(KnowledgeNode, node_id)
+
+    async def list_nodes(
+        self,
+        type: str | None = None,
+        limit: int = 50,
+    ) -> list[KnowledgeNode]:
+        async with self._sf() as session:
+            stmt = select(KnowledgeNode).order_by(desc(KnowledgeNode.created_at)).limit(limit)
+            if type:
+                stmt = stmt.where(KnowledgeNode.type == type)
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    async def search_nodes(self, query: str, limit: int = 20) -> list[KnowledgeNode]:
+        """Fulltext LIKE search across title and summary."""
+        from sqlalchemy import or_
+        pattern = f"%{query}%"
+        async with self._sf() as session:
+            stmt = (
+                select(KnowledgeNode)
+                .where(or_(
+                    KnowledgeNode.title.like(pattern),
+                    KnowledgeNode.summary.like(pattern),
+                ))
+                .order_by(desc(KnowledgeNode.created_at))
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    async def create_edge(
+        self,
+        from_node_id: str,
+        to_node_id: str,
+        relation_type: str = "related_to",
+        weight: float = 1.0,
+    ) -> KnowledgeEdge:
+        edge = KnowledgeEdge(
+            from_node_id=from_node_id,
+            to_node_id=to_node_id,
+            relation_type=relation_type,
+            weight=weight,
+        )
+        async with self._sf() as session:
+            session.add(edge)
+            await session.commit()
+            await session.refresh(edge)
+        return edge
+
+    async def list_edges(
+        self,
+        node_id: str | None = None,
+        limit: int = 100,
+    ) -> list[KnowledgeEdge]:
+        """List edges, optionally filtered to those touching a given node."""
+        from sqlalchemy import or_
+        async with self._sf() as session:
+            stmt = select(KnowledgeEdge).order_by(desc(KnowledgeEdge.created_at)).limit(limit)
+            if node_id:
+                stmt = stmt.where(or_(
+                    KnowledgeEdge.from_node_id == node_id,
+                    KnowledgeEdge.to_node_id == node_id,
+                ))
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    # ── Skills ───────────────────────────────────────────────────────────────
+
+    async def create_skill(self, name: str, description: str | None = None) -> Skill:
+        skill = Skill(name=name, description=description)
+        async with self._sf() as session:
+            session.add(skill)
+            await session.commit()
+            await session.refresh(skill)
+        return skill
+
+    async def list_skills(self) -> list[Skill]:
+        async with self._sf() as session:
+            result = await session.execute(select(Skill).order_by(Skill.name))
+            return list(result.scalars().all())
+
+    async def get_skill_by_name(self, name: str) -> Skill | None:
+        async with self._sf() as session:
+            result = await session.execute(select(Skill).where(Skill.name == name))
+            return result.scalars().first()
+
+    async def save_skill_progress(
+        self,
+        skill_id: str,
+        level: float,
+        goal: float = 5.0,
+        notes: str | None = None,
+        assessed_by: str = "auto",
+    ) -> SkillProgress:
+        sp = SkillProgress(
+            skill_id=skill_id,
+            level=level,
+            goal=goal,
+            notes=notes,
+            assessed_by=assessed_by,
+        )
+        async with self._sf() as session:
+            session.add(sp)
+            await session.commit()
+            await session.refresh(sp)
+        return sp
+
+    async def get_skill_history(self, skill_id: str, limit: int = 20) -> list[SkillProgress]:
+        async with self._sf() as session:
+            stmt = (
+                select(SkillProgress)
+                .where(SkillProgress.skill_id == skill_id)
+                .order_by(desc(SkillProgress.assessed_at))
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    async def get_latest_skill_progress(self, skill_id: str) -> SkillProgress | None:
+        history = await self.get_skill_history(skill_id, limit=1)
+        return history[0] if history else None
 
 
 # Module-level singleton

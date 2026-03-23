@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="ru" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,33 +10,36 @@
 
 <div class="layout">
 
-  <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+  <!-- ── БОКОВАЯ ПАНЕЛЬ ──────────────────────────────────────────────── -->
   <aside class="sidebar">
     <div class="sidebar-top">
       <div class="sidebar-logo">🌹 <span>ROSA OS</span></div>
-      <button id="new-chat-btn" class="btn-new-chat" title="New chat (Ctrl+N)">
-        <span class="icon">✏️</span> New chat
+      <button id="new-chat-btn" class="btn-new-chat" title="Новый чат (Ctrl+N)">
+        <span class="icon">✏️</span> Новый чат
       </button>
       <div class="search-wrap">
-        <input id="session-search" type="text" placeholder="Search chats…" autocomplete="off" />
+        <input id="session-search" type="text" placeholder="Поиск по чатам…" autocomplete="off" />
       </div>
     </div>
 
-    <!-- Folders + Session list -->
+    <!-- Папки + Список чатов -->
     <div class="sidebar-sessions" id="sidebar-sessions">
-      <!-- rendered by JS -->
+      <!-- рендерится через JS -->
     </div>
 
-    <!-- Bottom nav -->
+    <!-- Нижняя навигация -->
     <div class="sidebar-bottom">
-      <button class="bottom-nav-btn active" data-view="chat" title="Chat">
-        💬 <span>Chat</span>
+      <button class="bottom-nav-btn active" data-view="chat" title="Чат">
+        💬 <span>Чат</span>
       </button>
-      <button class="bottom-nav-btn" data-view="selfimprove" title="Self-Improve">
-        🔬 <span>Improve</span>
+      <button class="bottom-nav-btn" data-view="knowledge" title="Граф знаний">
+        🧠 <span>Знания</span>
       </button>
-      <button class="bottom-nav-btn" data-view="settings" title="Settings">
-        ⚙️ <span>Settings</span>
+      <button class="bottom-nav-btn" data-view="selfimprove" title="Улучшение">
+        🔬 <span>Улучшение</span>
+      </button>
+      <button class="bottom-nav-btn" data-view="settings" title="Настройки">
+        ⚙️ <span>Настройки</span>
       </button>
       <div class="status-pill">
         <span id="status-dot" class="dot disconnected"></span>
@@ -45,18 +48,18 @@
     </div>
   </aside>
 
-  <!-- ── WORKSPACE ────────────────────────────────────────────────── -->
+  <!-- ── РАБОЧАЯ ОБЛАСТЬ ────────────────────────────────────────────── -->
   <main class="workspace">
 
-    <!-- CHAT VIEW -->
+    <!-- ВИД: ЧАТ -->
     <div id="view-chat" class="view active">
       <div class="chat-header">
         <div class="chat-title-wrap">
-          <span id="chat-title" class="chat-title" contenteditable="false" spellcheck="false">New chat</span>
-          <button id="rename-btn" class="icon-btn-sm" title="Rename">✏️</button>
+          <span id="chat-title" class="chat-title" contenteditable="false" spellcheck="false">Новый чат</span>
+          <button id="rename-btn" class="icon-btn-sm" title="Переименовать">✏️</button>
         </div>
         <div class="chat-meta">
-          <span id="model-badge" class="badge badge-model">auto</span>
+          <span id="model-badge" class="badge badge-model">авто</span>
           <span id="mode-badge" class="badge badge-mode">kimi</span>
         </div>
       </div>
@@ -65,136 +68,187 @@
         <div class="welcome-screen">
           <div class="welcome-logo">🌹</div>
           <h2>ROSA OS</h2>
-          <p>Hybrid AI assistant powered by Kimi K2.5</p>
+          <p>Гибридный ИИ-ассистент на базе Kimi K2.5</p>
           <div class="welcome-hints">
-            <div class="hint-chip">📎 Attach files</div>
-            <div class="hint-chip">🌐 Parse URLs</div>
-            <div class="hint-chip">🎤 Voice input</div>
-            <div class="hint-chip">⚡ Live mode</div>
+            <div class="hint-chip">📎 Прикрепить файлы</div>
+            <div class="hint-chip">🌐 Парсить URL</div>
+            <div class="hint-chip">🎤 Голосовой ввод</div>
+            <div class="hint-chip">⚡ Live-режим</div>
           </div>
         </div>
       </div>
 
-      <!-- Input bar -->
+      <!-- Панель ввода -->
       <div class="input-area">
-        <!-- File chips -->
+        <!-- Чипы файлов -->
         <div id="file-chips" class="file-chips hidden"></div>
-        <!-- URL input row -->
+        <!-- Строка URL -->
         <div id="url-row" class="url-row hidden">
           <input id="url-input" type="url" placeholder="https://…" autocomplete="off" />
-          <button id="url-fetch-btn" class="btn-fetch">Fetch</button>
+          <button id="url-fetch-btn" class="btn-fetch">Загрузить</button>
           <button id="url-close-btn" class="icon-btn-sm">✕</button>
         </div>
         <div class="input-row">
           <div class="input-tools">
-            <button id="attach-btn" class="tool-btn" title="Attach file (Ctrl+U)">📎</button>
-            <button id="voice-btn" class="tool-btn" title="Voice input (Ctrl+M)">🎤</button>
-            <button id="url-btn"   class="tool-btn" title="Parse URL (Ctrl+L)">🌐</button>
-            <button id="live-btn"  class="tool-btn" title="Live mode (Ctrl+Shift+L)">⚡</button>
+            <button id="attach-btn" class="tool-btn" title="Прикрепить файл (Ctrl+U)">📎</button>
+            <button id="voice-btn"  class="tool-btn" title="Голосовой ввод (Ctrl+M)">🎤</button>
+            <button id="url-btn"    class="tool-btn" title="Парсить URL (Ctrl+L)">🌐</button>
+            <button id="live-btn"   class="tool-btn" title="Live-режим (Ctrl+Shift+L)">⚡</button>
           </div>
           <textarea
             id="chat-input"
-            placeholder="Message Rosa… (Enter to send, Shift+Enter for newline)"
+            placeholder="Сообщение Розе… (Enter — отправить, Shift+Enter — новая строка)"
             rows="1"
             autofocus
           ></textarea>
           <div class="mode-wrap">
-            <select id="chat-mode" title="Routing mode">
-              <option value="">Auto</option>
-              <option value="cloud">Cloud</option>
-              <option value="local">Local</option>
+            <select id="chat-mode" title="Режим маршрутизации">
+              <option value="">Авто</option>
+              <option value="cloud">Облако</option>
+              <option value="local">Локально</option>
             </select>
-            <button id="send-btn" class="send-btn" title="Send (Enter)">↑</button>
+            <button id="send-btn" class="send-btn" title="Отправить (Enter)">↑</button>
           </div>
         </div>
       </div>
 
-      <!-- Hidden file input -->
+      <!-- Скрытый file input -->
       <input type="file" id="file-input" multiple accept="*/*" style="display:none" />
     </div><!-- /view-chat -->
 
-    <!-- SELF-IMPROVE VIEW -->
+    <!-- ВИД: ГРАФ ЗНАНИЙ -->
+    <div id="view-knowledge" class="view">
+      <div class="view-header">
+        <h2>🧠 Граф знаний</h2>
+        <div class="view-header-actions">
+          <button id="refresh-knowledge-btn" class="btn-ghost">↻ Обновить</button>
+        </div>
+      </div>
+
+      <div class="knowledge-layout">
+        <!-- Список узлов -->
+        <div class="knowledge-col knowledge-nodes-col">
+          <div class="col-header">
+            <h3>Узлы знаний</h3>
+            <select id="node-type-filter">
+              <option value="">Все типы</option>
+              <option value="insight">💡 Инсайты</option>
+              <option value="entity">📌 Сущности</option>
+              <option value="concept">🧠 Концепции</option>
+              <option value="fact">📎 Факты</option>
+            </select>
+          </div>
+          <div id="knowledge-nodes-list" class="knowledge-nodes-list">
+            <p class="empty-state">Нет узлов. Добавьте инсайт ниже.</p>
+          </div>
+
+          <!-- Добавить инсайт -->
+          <div class="insight-input-wrap">
+            <textarea id="insight-input" placeholder="Добавить инсайт или знание…" rows="3"></textarea>
+            <button id="add-insight-btn" class="btn-primary">💡 Добавить инсайт</button>
+          </div>
+        </div>
+
+        <!-- Детали выбранного узла -->
+        <div class="knowledge-col knowledge-detail-col">
+          <div class="col-header">
+            <h3 id="node-detail-title">Выберите узел</h3>
+          </div>
+          <div id="node-detail-body" class="node-detail-body">
+            <p class="empty-state">Нажмите на узел слева, чтобы увидеть связи.</p>
+          </div>
+        </div>
+      </div>
+    </div><!-- /view-knowledge -->
+
+    <!-- ВИД: УЛУЧШЕНИЕ -->
     <div id="view-selfimprove" class="view">
       <div class="view-header">
-        <h2>🔬 Self-Improvement</h2>
+        <h2>🔬 Улучшение</h2>
         <div class="view-header-actions">
-          <button id="run-cycle-btn" class="btn-primary">Run Cycle</button>
+          <button id="run-cycle-btn" class="btn-primary">Запустить цикл</button>
         </div>
       </div>
 
       <div class="improve-layout">
-        <!-- Events column -->
+        <!-- Колонка: события -->
         <div class="improve-col">
           <div class="col-header">
-            <h3>Recent Events</h3>
+            <h3>Последние события</h3>
             <select id="event-severity-filter">
-              <option value="">All severities</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="warning">Warning</option>
-              <option value="info">Info</option>
+              <option value="">Все</option>
+              <option value="critical">Критические</option>
+              <option value="high">Высокие</option>
+              <option value="warning">Предупреждения</option>
+              <option value="info">Инфо</option>
             </select>
           </div>
           <div id="events-list" class="events-list">
-            <p class="empty-state">Loading events…</p>
+            <p class="empty-state">Загрузка событий…</p>
           </div>
         </div>
 
-        <!-- Proposals column -->
+        <!-- Колонка: предложения -->
         <div class="improve-col">
           <div class="col-header">
-            <h3>Proposals</h3>
-            <button id="refresh-proposals-btn" class="btn-ghost">↻ Refresh</button>
+            <h3>Предложения</h3>
+            <button id="refresh-proposals-btn" class="btn-ghost">↻ Обновить</button>
           </div>
           <div id="proposals-list" class="proposals-list">
-            <p class="empty-state">Loading proposals…</p>
+            <p class="empty-state">Загрузка предложений…</p>
           </div>
         </div>
       </div>
     </div><!-- /view-selfimprove -->
 
-    <!-- SETTINGS VIEW -->
+    <!-- ВИД: НАСТРОЙКИ -->
     <div id="view-settings" class="view">
-      <div class="view-header"><h2>⚙️ Settings</h2></div>
+      <div class="view-header"><h2>⚙️ Настройки</h2></div>
       <div class="settings-body">
         <section class="settings-section">
-          <h3>Connection</h3>
-          <label>Server URL
+          <h3>Подключение</h3>
+          <label>URL сервера
             <input type="text" id="setting-server" value="http://localhost:8000" />
           </label>
         </section>
         <section class="settings-section">
-          <h3>Model</h3>
-          <label>Default routing mode
+          <h3>Модель</h3>
+          <label>Режим маршрутизации по умолчанию
             <select id="setting-mode">
-              <option value="">Auto (smart routing)</option>
-              <option value="cloud">Always Cloud — Kimi K2.5</option>
-              <option value="local">Always Local — Ollama</option>
+              <option value="">Авто (умная маршрутизация)</option>
+              <option value="cloud">Всегда облако — Kimi K2.5</option>
+              <option value="local">Всегда локально — Ollama</option>
             </select>
           </label>
         </section>
         <section class="settings-section">
-          <h3>Appearance</h3>
-          <label>Theme
+          <h3>Оформление</h3>
+          <label>Тема
             <select id="setting-theme">
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
+              <option value="dark">Тёмная</option>
+              <option value="light">Светлая</option>
             </select>
           </label>
         </section>
         <section class="settings-section">
-          <h3>Folders</h3>
+          <h3>Папки</h3>
           <div id="folder-manager" class="folder-manager"></div>
-          <button id="add-folder-btn" class="btn-secondary">+ New folder</button>
+          <button id="add-folder-btn" class="btn-secondary">+ Новая папка</button>
         </section>
-        <button id="save-settings-btn" class="btn-primary">Save settings</button>
+        <section class="settings-section">
+          <h3>Интеграции</h3>
+          <div id="integrations-list" class="integrations-list">
+            <!-- рендерится через JS -->
+          </div>
+        </section>
+        <button id="save-settings-btn" class="btn-primary">Сохранить настройки</button>
         <div class="settings-about">
-          <strong>ROSA OS v2.0.0</strong><br/>
-          Brain: Kimi K2.5 via OpenRouter<br/>
-          Builder: Claude Code<br/>
-          Future: Perplexity Computer integration<br/>
-          <a href="/docs/CONSTITUTION.md" target="_blank">Constitution</a> ·
-          <a href="/api/docs" target="_blank">API docs</a>
+          <strong>ROSA OS v3.0.0</strong><br/>
+          Мозг: Kimi K2.5 через OpenRouter<br/>
+          Строитель: Claude Code<br/>
+          Будущее: интеграция Perplexity Computer<br/>
+          <a href="/docs/CONSTITUTION.md" target="_blank">Конституция</a> ·
+          <a href="/api/docs" target="_blank">API документация</a>
         </div>
       </div>
     </div><!-- /view-settings -->
@@ -202,14 +256,14 @@
   </main>
 </div>
 
-<!-- Confirmation modal -->
+<!-- Модальное окно подтверждения -->
 <div id="modal-overlay" class="modal-overlay hidden">
   <div class="modal">
-    <h3 id="modal-title">Confirm</h3>
+    <h3 id="modal-title">Подтверждение</h3>
     <p id="modal-body"></p>
     <div class="modal-actions">
-      <button id="modal-cancel" class="btn-ghost">Cancel</button>
-      <button id="modal-confirm" class="btn-danger">Confirm</button>
+      <button id="modal-cancel" class="btn-ghost">Отмена</button>
+      <button id="modal-confirm" class="btn-danger">Подтвердить</button>
     </div>
   </div>
 </div>

@@ -1,5 +1,5 @@
 /* ============================================================
-   ROSA OS — Desktop App v2.0
+   ROSA OS — Desktop App v3.0
    Single-file frontend. Sections marked with ── comment banners.
    ============================================================ */
 
@@ -15,6 +15,10 @@ const state = {
   currentSessionId: null,
   sessions: [],
   folders: [],
+
+  // Knowledge graph
+  knowledgeNodes: [],
+  selectedNodeId: null,
 
   liveMode: false,
   liveTimer: null,
@@ -61,11 +65,11 @@ function renderMd(text) {
 function relativeTime(iso) {
   const d = new Date(iso);
   const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return d.toLocaleDateString();
+  if (diff < 60) return "только что";
+  if (diff < 3600) return `${Math.floor(diff / 60)} мин назад`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} ч назад`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} дн назад`;
+  return d.toLocaleDateString("ru-RU");
 }
 
 async function apiFetch(path, opts = {}) {
@@ -123,7 +127,8 @@ function switchView(view) {
     btn.classList.toggle("active", btn.dataset.view === view);
   });
   if (view === "selfimprove") loadSelfImprove();
-  if (view === "settings") renderFolderManager();
+  if (view === "settings") { renderFolderManager(); renderIntegrations(); }
+  if (view === "knowledge") loadKnowledge();
 }
 
 $$(".bottom-nav-btn").forEach((btn) =>
@@ -143,12 +148,12 @@ function wsUrl() {
 function wsConnect() {
   if (state.ws && state.ws.readyState < 2) return; // already open/connecting
   clearTimeout(state.reconnectTimer);
-  setStatus("connecting", "Connecting…");
+  setStatus("connecting", "Подключение…");
 
   const ws = new WebSocket(wsUrl());
   state.ws = ws;
 
-  ws.onopen = () => setStatus("connected", "Connected");
+  ws.onopen = () => setStatus("connected", "Подключено");
 
   ws.onmessage = (e) => {
     let data;
@@ -161,14 +166,14 @@ function wsConnect() {
       state.sending = false;
       setSending(false);
     } else if (data.type === "error") {
-      appendErrorBubble(data.message || "Unknown error");
+      appendErrorBubble(data.message || "Неизвестная ошибка");
       state.sending = false;
       setSending(false);
     }
   };
 
   ws.onclose = () => {
-    setStatus("disconnected", "Disconnected");
+    setStatus("disconnected", "Отключено");
     state.reconnectTimer = setTimeout(wsConnect, 3000);
   };
 
@@ -267,7 +272,7 @@ async function sendMessage() {
       text = `[WEB: ${res.url}]\n${res.content}\n\n${text}`;
       closeUrlMode();
     } catch (err) {
-      appendErrorBubble(`URL fetch failed: ${err.message}`);
+      appendErrorBubble(`Ошибка загрузки URL: ${err.message}`);
       return;
     }
   }
@@ -276,9 +281,9 @@ async function sendMessage() {
   let fileContext = "";
   for (const f of state.pendingFiles) {
     if (f.extracted_text) {
-      fileContext += `\n\n[FILE: ${f.filename}]\n${f.extracted_text}`;
+      fileContext += `\n\n[ФАЙЛ: ${f.filename}]\n${f.extracted_text}`;
     } else if (f.needs_vision) {
-      fileContext += `\n\n[IMAGE: ${f.filename} — vision analysis not yet available]`;
+      fileContext += `\n\n[ИЗОБРАЖЕНИЕ: ${f.filename} — анализ через vision пока недоступен]`;
     }
   }
   const fullText = text + fileContext;
@@ -353,7 +358,7 @@ async function loadSessions() {
 }
 
 async function createSession(title) {
-  title = title || "New chat";
+  title = title || "Новый чат";
   const s = await apiFetch("/api/sessions", {
     method: "POST",
     body: JSON.stringify({ title }),
@@ -369,12 +374,12 @@ async function createSession(title) {
     <div class="welcome-screen">
       <div class="welcome-logo">&#127801;</div>
       <h2>ROSA OS</h2>
-      <p>Hybrid AI assistant powered by Kimi K2.5</p>
+      <p>Гибридный ИИ-ассистент на базе Kimi K2.5</p>
       <div class="welcome-hints">
-        <div class="hint-chip">&#128206; Attach files</div>
-        <div class="hint-chip">&#127760; Parse URLs</div>
-        <div class="hint-chip">&#127908; Voice input</div>
-        <div class="hint-chip">&#9889; Live mode</div>
+        <div class="hint-chip">&#128206; Прикрепить файлы</div>
+        <div class="hint-chip">&#127760; Парсить URL</div>
+        <div class="hint-chip">&#127908; Голосовой ввод</div>
+        <div class="hint-chip">&#9889; Live-режим</div>
       </div>
     </div>`;
   return s;
@@ -395,16 +400,16 @@ async function openSession(id) {
       appendBubble(turn.role, renderMd(turn.content), turn.model_used || "");
     }
     if (messages.length === 0) {
-      $("#messages").innerHTML = `<div style="margin:2rem auto;text-align:center;color:var(--text3)">No messages yet — start chatting!</div>`;
+      $("#messages").innerHTML = `<div style="margin:2rem auto;text-align:center;color:var(--text3)">Сообщений пока нет — начните диалог!</div>`;
     }
   } catch (err) {
-    appendErrorBubble(`Could not load session: ${err.message}`);
+    appendErrorBubble(`Не удалось загрузить сессию: ${err.message}`);
   }
   renderSidebar();
 }
 
 async function deleteSession(id) {
-  const ok = await showModal("Delete chat?", "This will permanently remove the chat and all its messages.");
+  const ok = await showModal("Удалить чат?", "Это удалит чат и все его сообщения. Действие необратимо.");
   if (!ok) return;
   await apiFetch(`/api/sessions/${id}`, { method: "DELETE" });
   if (state.currentSessionId === id) {
@@ -416,7 +421,7 @@ async function deleteSession(id) {
 }
 
 async function renameSession(id, currentTitle) {
-  const title = prompt("Rename chat:", currentTitle);
+  const title = prompt("Переименовать чат:", currentTitle);
   if (!title || title === currentTitle) return;
   await apiFetch(`/api/sessions/${id}`, {
     method: "PATCH",
@@ -437,7 +442,7 @@ function renderSidebar() {
   const search = $("#session-search").value.toLowerCase();
 
   // Group sessions by date
-  const groups = { Today: [], Yesterday: [], "This week": [], Older: [] };
+  const groups = { "Сегодня": [], "Вчера": [], "На этой неделе": [], "Раньше": [] };
   const now = new Date();
   const today = now.toDateString();
   const yesterday = new Date(now - 86400000).toDateString();
@@ -454,17 +459,17 @@ function renderSidebar() {
     const d = new Date(s.updated_at || s.created_at);
     const ds = d.toDateString();
     const diffDays = (now - d) / 86400000;
-    if (ds === today) groups["Today"].push(s);
-    else if (ds === yesterday) groups["Yesterday"].push(s);
-    else if (diffDays < 7) groups["This week"].push(s);
-    else groups["Older"].push(s);
+    if (ds === today) groups["Сегодня"].push(s);
+    else if (ds === yesterday) groups["Вчера"].push(s);
+    else if (diffDays < 7) groups["На этой неделе"].push(s);
+    else groups["Раньше"].push(s);
   }
 
   let html = "";
 
   // Folders
   if (state.folders.length > 0) {
-    html += `<div class="sidebar-group-label">&#128193; Folders</div>`;
+    html += `<div class="sidebar-group-label">&#128193; Папки</div>`;
     for (const folder of state.folders) {
       const folderSessions = sessions.filter((s) => s.folder_id === folder.id);
       html += `
@@ -472,8 +477,8 @@ function renderSidebar() {
           <span class="folder-toggle">&#9662;</span>
           <span class="folder-name">${escHtml(folder.name)}</span>
           <span class="session-actions">
-            <button class="action-btn rename-folder" data-id="${escHtml(folder.id)}" data-name="${escHtml(folder.name)}" title="Rename">&#9998;</button>
-            <button class="action-btn delete-folder" data-id="${escHtml(folder.id)}" title="Delete">&#128465;</button>
+            <button class="action-btn rename-folder" data-id="${escHtml(folder.id)}" data-name="${escHtml(folder.name)}" title="Переименовать">&#9998;</button>
+            <button class="action-btn delete-folder" data-id="${escHtml(folder.id)}" title="Удалить">&#128465;</button>
           </span>
         </div>
         <div class="folder-sessions" data-folder-body="${escHtml(folder.id)}">
@@ -491,7 +496,7 @@ function renderSidebar() {
   }
 
   if (sessions.length === 0) {
-    html = `<p class="empty-state">No chats yet</p>`;
+    html = `<p class="empty-state">Чатов пока нет</p>`;
   }
 
   container.innerHTML = html;
@@ -541,8 +546,8 @@ function sessionItemHtml(s) {
       <div class="session-title">${escHtml(s.title)}</div>
       ${preview ? `<div class="session-preview">${preview}</div>` : ""}
       <span class="session-actions">
-        <button class="action-btn rename-session" data-id="${escHtml(s.id)}" data-title="${escHtml(s.title)}" title="Rename">&#9998;</button>
-        <button class="action-btn delete-session" data-id="${escHtml(s.id)}" title="Delete">&#128465;</button>
+        <button class="action-btn rename-session" data-id="${escHtml(s.id)}" data-title="${escHtml(s.title)}" title="Переименовать">&#9998;</button>
+        <button class="action-btn delete-session" data-id="${escHtml(s.id)}" title="Удалить">&#128465;</button>
       </span>
     </div>`;
 }
@@ -566,7 +571,7 @@ async function createFolder(name) {
 }
 
 async function renameFolder(id, currentName) {
-  const name = prompt("Rename folder:", currentName);
+  const name = prompt("Переименовать папку:", currentName);
   if (!name || name === currentName) return;
   await apiFetch(`/api/folders/${id}`, {
     method: "PATCH",
@@ -576,7 +581,7 @@ async function renameFolder(id, currentName) {
 }
 
 async function deleteFolder(id) {
-  const ok = await showModal("Delete folder?", "Sessions inside will be moved to root. This cannot be undone.");
+  const ok = await showModal("Удалить папку?", "Чаты внутри переместятся в корень. Действие необратимо.");
   if (!ok) return;
   await apiFetch(`/api/folders/${id}`, { method: "DELETE" });
   await loadSessions();
@@ -594,7 +599,7 @@ $("#file-input").addEventListener("change", async (e) => {
   if (!files.length) return;
 
   for (const file of files) {
-    const chip = addFileChip(file.name, "uploading…");
+    const chip = addFileChip(file.name, "загрузка…");
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -609,9 +614,9 @@ $("#file-input").addEventListener("change", async (e) => {
       const data = await res.json();
       state.pendingFiles.push(data);
       chip.dataset.fileId = data.file_id;
-      chip.querySelector(".chip-status").textContent = data.needs_vision ? "image" : "ready";
+      chip.querySelector(".chip-status").textContent = data.needs_vision ? "изображение" : "готово";
     } catch (err) {
-      chip.querySelector(".chip-status").textContent = "error";
+      chip.querySelector(".chip-status").textContent = "ошибка";
       chip.classList.add("chip-error");
       console.error("upload:", err);
     }
@@ -626,7 +631,7 @@ function addFileChip(name, status) {
   chip.innerHTML = `
     <span class="chip-name">${escHtml(name)}</span>
     <span class="chip-status">${escHtml(status)}</span>
-    <button class="chip-remove" title="Remove">&#10005;</button>
+    <button class="chip-remove" title="Убрать">&#10005;</button>
   `;
   chip.querySelector(".chip-remove").addEventListener("click", () => {
     const idx = state.pendingFiles.findIndex((f) => f.file_id === chip.dataset.fileId);
@@ -660,7 +665,7 @@ function startVoiceBrowserSTT() {
   if (!SR) return false;
 
   _recognition = new SR();
-  _recognition.lang = "en-US";
+  _recognition.lang = "ru-RU";
   _recognition.interimResults = true;
   _recognition.maxAlternatives = 1;
 
@@ -727,7 +732,7 @@ async function startVoiceWhisper() {
     state.voiceRecording = true;
     $("#voice-btn").classList.add("recording");
   } catch (_) {
-    alert("Microphone access denied or unavailable.");
+    alert("Доступ к микрофону запрещён или недоступен.");
   }
 }
 
@@ -776,9 +781,9 @@ $("#url-fetch-btn").addEventListener("click", async () => {
     autoResizeTextarea();
     closeUrlMode();
   } catch (err) {
-    alert(`URL fetch error: ${err.message}`);
+    alert(`Ошибка загрузки URL: ${err.message}`);
   } finally {
-    $("#url-fetch-btn").textContent = "Fetch";
+    $("#url-fetch-btn").textContent = "Загрузить";
   }
 });
 
@@ -789,8 +794,7 @@ $("#live-btn").addEventListener("click", () => {
   $("#live-btn").classList.toggle("active", state.liveMode);
   if (state.liveMode) {
     state.liveTimer = setInterval(() => {
-      // Hook for Perplexity Computer integration
-      // Currently just refreshes session messages
+      // Хук для интеграции Perplexity Computer
       if (state.currentSessionId) loadSessions();
     }, 3000);
   } else {
@@ -806,6 +810,130 @@ $("#rename-btn").addEventListener("click", () => {
   renameSession(state.currentSessionId, current);
 });
 
+// ── KNOWLEDGE GRAPH ───────────────────────────────────────────────────────
+
+const NODE_ICONS = { insight: "💡", entity: "📌", concept: "🧠", fact: "📎" };
+const NODE_LABELS = { insight: "Инсайт", entity: "Сущность", concept: "Концепция", fact: "Факт" };
+
+async function loadKnowledge() {
+  const filter = $("#node-type-filter") ? $("#node-type-filter").value : "";
+  const list = $("#knowledge-nodes-list");
+  list.innerHTML = `<p class="empty-state">Загрузка…</p>`;
+  try {
+    const params = new URLSearchParams({ limit: 100 });
+    if (filter) params.set("type", filter);
+    const data = await apiFetch(`/api/knowledge/nodes?${params}`);
+    state.knowledgeNodes = Array.isArray(data) ? data : (data.nodes || []);
+    renderKnowledgeNodes();
+  } catch (err) {
+    // Knowledge API may not exist yet (Phase 2) — show friendly stub
+    list.innerHTML = `<p class="empty-state">🔧 Граф знаний появится в фазе 2.<br><small>API /api/knowledge пока не готово.</small></p>`;
+  }
+}
+
+function renderKnowledgeNodes() {
+  const list = $("#knowledge-nodes-list");
+  if (!state.knowledgeNodes.length) {
+    list.innerHTML = `<p class="empty-state">Нет узлов. Добавьте инсайт ниже.</p>`;
+    return;
+  }
+  list.innerHTML = state.knowledgeNodes.map((node) => {
+    const icon = NODE_ICONS[node.type] || "📄";
+    const label = NODE_LABELS[node.type] || node.type;
+    const active = node.id === state.selectedNodeId ? " active" : "";
+    return `
+      <div class="knowledge-node-item${active}" data-id="${escHtml(node.id)}">
+        <span class="node-icon">${icon}</span>
+        <div class="node-info">
+          <div class="node-title">${escHtml(node.title)}</div>
+          <div class="node-meta">${label} · ${relativeTime(node.created_at)}</div>
+        </div>
+      </div>`;
+  }).join("");
+
+  $$(".knowledge-node-item").forEach((el) =>
+    el.addEventListener("click", () => openNodeDetail(el.dataset.id))
+  );
+}
+
+async function openNodeDetail(nodeId) {
+  state.selectedNodeId = nodeId;
+  renderKnowledgeNodes(); // re-render to show active state
+
+  const titleEl = $("#node-detail-title");
+  const bodyEl = $("#node-detail-body");
+  const node = state.knowledgeNodes.find((n) => n.id === nodeId);
+  if (!node) return;
+
+  titleEl.textContent = `${NODE_ICONS[node.type] || "📄"} ${node.title}`;
+  bodyEl.innerHTML = `<p class="empty-state">Загрузка связей…</p>`;
+
+  try {
+    const data = await apiFetch(`/api/knowledge/graph?query=${encodeURIComponent(node.title)}&limit=10`);
+    const edges = (data.edges || []).filter(
+      (e) => e.from_node_id === nodeId || e.to_node_id === nodeId
+    );
+    const relatedIds = new Set(edges.flatMap((e) => [e.from_node_id, e.to_node_id]).filter((id) => id !== nodeId));
+    const relatedNodes = (data.nodes || []).filter((n) => relatedIds.has(n.id));
+
+    bodyEl.innerHTML = `
+      <div class="node-summary">${escHtml(node.summary || "")}</div>
+      <div class="node-source">Источник: ${escHtml(node.source_type || "—")}</div>
+      ${edges.length ? `
+        <h4>Связи (${edges.length})</h4>
+        <div class="edges-list">
+          ${edges.map((e) => {
+            const otherId = e.from_node_id === nodeId ? e.to_node_id : e.from_node_id;
+            const direction = e.from_node_id === nodeId ? "→" : "←";
+            const other = state.knowledgeNodes.find((n) => n.id === otherId) ||
+              relatedNodes.find((n) => n.id === otherId);
+            const otherTitle = other ? other.title : otherId.slice(0, 8) + "…";
+            return `<div class="edge-item">
+              <span class="edge-direction">${direction}</span>
+              <span class="edge-relation">${escHtml(e.relation_type)}</span>
+              <span class="edge-target">${escHtml(otherTitle)}</span>
+            </div>`;
+          }).join("")}
+        </div>` : `<p class="empty-state">Нет связей с другими узлами.</p>`}`;
+  } catch (err) {
+    bodyEl.innerHTML = `<div class="node-summary">${escHtml(node.summary || "")}</div><p class="empty-state">Ошибка загрузки связей.</p>`;
+  }
+}
+
+// Add insight button
+$("#add-insight-btn").addEventListener("click", async () => {
+  const text = $("#insight-input").value.trim();
+  if (!text) return;
+  const btn = $("#add-insight-btn");
+  btn.disabled = true;
+  btn.textContent = "Добавление…";
+  try {
+    const res = await apiFetch("/api/knowledge/insights", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+    $("#insight-input").value = "";
+    const added = res.nodes_created || 0;
+    alert(`✅ Добавлено узлов: ${added}`);
+    await loadKnowledge();
+  } catch (err) {
+    alert(`Ошибка: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "💡 Добавить инсайт";
+  }
+});
+
+// Node type filter
+if ($("#node-type-filter")) {
+  $("#node-type-filter").addEventListener("change", loadKnowledge);
+}
+
+// Refresh knowledge
+if ($("#refresh-knowledge-btn")) {
+  $("#refresh-knowledge-btn").addEventListener("click", loadKnowledge);
+}
+
 // ── SELF-IMPROVE PANEL ────────────────────────────────────────────────────
 
 async function loadSelfImprove() {
@@ -816,13 +944,13 @@ async function loadSelfImprove() {
 async function loadEvents() {
   const list = $("#events-list");
   const severity = $("#event-severity-filter").value;
-  list.innerHTML = `<p class="empty-state">Loading…</p>`;
+  list.innerHTML = `<p class="empty-state">Загрузка…</p>`;
   try {
     const params = new URLSearchParams({ limit: 50 });
     if (severity) params.set("severity", severity);
     const events = await apiFetch(`/api/self-improve/events?${params}`);
     if (!events.length) {
-      list.innerHTML = `<p class="empty-state">No events yet.</p>`;
+      list.innerHTML = `<p class="empty-state">Событий пока нет.</p>`;
       return;
     }
     list.innerHTML = events.map((ev) => `
@@ -835,17 +963,17 @@ async function loadEvents() {
         <div class="event-desc">${escHtml(ev.description)}</div>
       </div>`).join("");
   } catch (err) {
-    list.innerHTML = `<p class="empty-state">Error: ${escHtml(err.message)}</p>`;
+    list.innerHTML = `<p class="empty-state">Ошибка: ${escHtml(err.message)}</p>`;
   }
 }
 
 async function loadProposals() {
   const list = $("#proposals-list");
-  list.innerHTML = `<p class="empty-state">Loading…</p>`;
+  list.innerHTML = `<p class="empty-state">Загрузка…</p>`;
   try {
     const proposals = await apiFetch("/api/self-improve/proposals");
     if (!proposals.length) {
-      list.innerHTML = `<p class="empty-state">No proposals yet. Run a cycle to generate some.</p>`;
+      list.innerHTML = `<p class="empty-state">Нет предложений. Запустите цикл улучшения.</p>`;
       return;
     }
     list.innerHTML = proposals.map((p) => `
@@ -855,25 +983,25 @@ async function loadProposals() {
           <span class="proposal-time">${relativeTime(p.created_at)}</span>
         </div>
         <div class="proposal-content">${escHtml(p.content.slice(0, 300))}${p.content.length > 300 ? "…" : ""}</div>
-        ${p.status !== "applied" ? `<button class="btn-ghost apply-btn" data-id="${escHtml(p.id)}">Apply</button>` : ""}
+        ${p.status !== "applied" ? `<button class="btn-ghost apply-btn" data-id="${escHtml(p.id)}">Применить</button>` : ""}
       </div>`).join("");
 
     $$(".apply-btn").forEach((btn) =>
       btn.addEventListener("click", () => applyProposal(btn.dataset.id))
     );
   } catch (err) {
-    list.innerHTML = `<p class="empty-state">Error: ${escHtml(err.message)}</p>`;
+    list.innerHTML = `<p class="empty-state">Ошибка: ${escHtml(err.message)}</p>`;
   }
 }
 
 async function applyProposal(id) {
-  const ok = await showModal("Apply proposal?", "This will attempt to apply the improvement proposal. Review the experimental/ directory first.");
+  const ok = await showModal("Применить предложение?", "Убедитесь, что проверили директорию experimental/ перед применением.");
   if (!ok) return;
   try {
     await apiFetch(`/api/self-improve/proposals/${id}/apply`, { method: "POST" });
     loadProposals();
   } catch (err) {
-    alert(`Apply failed: ${err.message}`);
+    alert(`Ошибка применения: ${err.message}`);
   }
 }
 
@@ -883,15 +1011,15 @@ $("#refresh-proposals-btn").addEventListener("click", loadProposals);
 $("#run-cycle-btn").addEventListener("click", async () => {
   const btn = $("#run-cycle-btn");
   btn.disabled = true;
-  btn.textContent = "Running…";
+  btn.textContent = "Выполняется…";
   try {
     await apiFetch("/api/self-improve/run", { method: "POST" });
     await loadSelfImprove();
   } catch (err) {
-    alert(`Cycle failed: ${err.message}`);
+    alert(`Ошибка цикла: ${err.message}`);
   } finally {
     btn.disabled = false;
-    btn.textContent = "Run Cycle";
+    btn.textContent = "Запустить цикл";
   }
 });
 
@@ -900,7 +1028,7 @@ $("#run-cycle-btn").addEventListener("click", async () => {
 function renderFolderManager() {
   const mgr = $("#folder-manager");
   if (!state.folders.length) {
-    mgr.innerHTML = `<p class="empty-state">No folders yet.</p>`;
+    mgr.innerHTML = `<p class="empty-state">Папок пока нет.</p>`;
     return;
   }
   mgr.innerHTML = state.folders.map((f) => `
@@ -920,8 +1048,33 @@ function renderFolderManager() {
   );
 }
 
+/** Render integrations list in Settings. */
+const INTEGRATIONS = [
+  { id: "telegram",    icon: "✈️",  name: "Telegram",       envKey: "TELEGRAM_BOT_TOKEN",  desc: "Чтение/отправка сообщений в Telegram" },
+  { id: "discord",     icon: "💬",  name: "Discord",         envKey: "DISCORD_TOKEN",       desc: "Мониторинг серверов и DM" },
+  { id: "twitter",     icon: "🐦",  name: "Twitter/X",       envKey: "TWITTER_API_KEY",     desc: "Парсинг и публикация твитов" },
+  { id: "gmail",       icon: "📧",  name: "Gmail",           envKey: "GMAIL_CREDENTIALS",   desc: "Чтение и отправка почты" },
+  { id: "gdrive",      icon: "📁",  name: "Google Drive",    envKey: "GOOGLE_CREDENTIALS",  desc: "Доступ к файлам и документам" },
+  { id: "perplexity",  icon: "🔍",  name: "Perplexity",      envKey: "PERPLEXITY_API_KEY",  desc: "Поиск и Computer Use (будущее)" },
+  { id: "openai_tts",  icon: "🗣️",  name: "OpenAI Voice",    envKey: "OPENAI_DIRECT_KEY",   desc: "Whisper STT + TTS синтез" },
+];
+
+function renderIntegrations() {
+  const container = $("#integrations-list");
+  if (!container) return;
+  container.innerHTML = INTEGRATIONS.map((intg) => `
+    <div class="integration-item">
+      <span class="intg-icon">${intg.icon}</span>
+      <div class="intg-info">
+        <div class="intg-name">${escHtml(intg.name)}</div>
+        <div class="intg-desc">${escHtml(intg.desc)}</div>
+      </div>
+      <span class="intg-status">🔴 Не настроено</span>
+    </div>`).join("");
+}
+
 $("#add-folder-btn").addEventListener("click", async () => {
-  const name = prompt("Folder name:");
+  const name = prompt("Название папки:");
   if (!name) return;
   await createFolder(name);
   renderFolderManager();
@@ -941,7 +1094,7 @@ $("#save-settings-btn").addEventListener("click", () => {
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem("rosa_theme", theme);
 
-  alert("Settings saved.");
+  alert("Настройки сохранены.");
 });
 
 // ── KEYBOARD SHORTCUTS ────────────────────────────────────────────────────
@@ -964,6 +1117,9 @@ document.addEventListener("keydown", (e) => {
   } else if (mod && e.key === "l") {
     e.preventDefault();
     $("#url-btn").click();
+  } else if (mod && e.key === "k") {
+    e.preventDefault();
+    switchView("knowledge");
   } else if (e.key === "Escape") {
     closeUrlMode();
     closeModal(false);
@@ -981,7 +1137,7 @@ async function boot() {
   $("#setting-theme").value = savedTheme;
   $("#setting-server").value = state.serverUrl;
 
-  setStatus("connecting", "Connecting…");
+  setStatus("connecting", "Подключение…");
 
   // Load sessions
   await loadSessions();

@@ -1,9 +1,12 @@
 """
 ROSA OS — Self-improvement API.
-POST /api/self-improve/run          — trigger one improvement cycle
-GET  /api/self-improve/proposals    — list pending proposals
-GET  /api/self-improve/events       — list recent events (filterable by severity)
-POST /api/self-improve/{id}/apply   — apply a proposal (requires confirmation)
+POST /api/self-improve/run              — trigger one improvement cycle
+GET  /api/self-improve/proposals        — list pending proposals
+GET  /api/self-improve/events           — list recent events (filterable by severity)
+POST /api/self-improve/{id}/apply       — apply a proposal (requires confirmation)
+GET  /api/self-improve/skills           — list skills with latest progress
+POST /api/self-improve/skills           — create a new skill
+POST /api/self-improve/skills/{id}/assess — owner manual assessment
 """
 
 from __future__ import annotations
@@ -122,3 +125,83 @@ async def apply_proposal(proposal_id: str, confirmed: bool = False) -> dict:
         raise HTTPException(status_code=404, detail="Proposal not found")
 
     return {"status": "applied", "detail": result}
+
+
+# ── Skills API ────────────────────────────────────────────────────────────────
+
+class SkillIn(BaseModel):
+    name: str
+    description: str | None = None
+
+
+class AssessIn(BaseModel):
+    level: float      # 1.0 – 5.0
+    goal: float = 5.0
+    notes: str | None = None
+
+
+class SkillOut(BaseModel):
+    id: str
+    name: str
+    description: str | None
+    created_at: str
+    latest_level: float | None
+    latest_goal: float | None
+    latest_notes: str | None
+    assessed_at: str | None
+
+
+@router.get("/skills", response_model=list[SkillOut])
+async def list_skills():
+    """List all skills with their latest progress assessment."""
+    from core.memory.store import get_store
+    store = await get_store()
+    skills = await store.list_skills()
+    result = []
+    for skill in skills:
+        progress = await store.get_latest_skill_progress(skill.id)
+        result.append(SkillOut(
+            id=skill.id,
+            name=skill.name,
+            description=skill.description,
+            created_at=skill.created_at.isoformat(),
+            latest_level=progress.level if progress else None,
+            latest_goal=progress.goal if progress else None,
+            latest_notes=progress.notes if progress else None,
+            assessed_at=progress.assessed_at.isoformat() if progress else None,
+        ))
+    return result
+
+
+@router.post("/skills", status_code=201)
+async def create_skill(body: SkillIn):
+    """Create a new skill to track."""
+    from core.memory.store import get_store
+    store = await get_store()
+    # Prevent duplicates
+    existing = await store.get_skill_by_name(body.name)
+    if existing:
+        raise HTTPException(status_code=409, detail=f"Skill '{body.name}' already exists")
+    skill = await store.create_skill(body.name, body.description)
+    return {"id": skill.id, "name": skill.name}
+
+
+@router.post("/skills/{skill_id}/assess", status_code=201)
+async def assess_skill(skill_id: str, body: AssessIn):
+    """Record a manual owner assessment for a skill."""
+    from core.memory.store import get_store
+    store = await get_store()
+    progress = await store.save_skill_progress(
+        skill_id=skill_id,
+        level=body.level,
+        goal=body.goal,
+        notes=body.notes,
+        assessed_by="owner",
+    )
+    return {
+        "id": progress.id,
+        "skill_id": skill_id,
+        "level": progress.level,
+        "goal": progress.goal,
+        "assessed_at": progress.assessed_at.isoformat(),
+    }
