@@ -1,10 +1,11 @@
-# 🌹 ROSA OS v3 — Гибридный Джарвис
+# 🌹 ROSA OS v6 — Автономная Self-Improving AI
 
-Автономный ИИ-ассистент с памятью, графом знаний, пантеоном моделей и самоулучшением.
+Полностью автономная ИИ-система с 3-слойной памятью, метакогницией,
+самоулучшением, локальным роутером и прозрачностью решений.
 
 **Мозг:** Kimi K2.5 (Moonshot AI) через OpenRouter
 **Строитель:** Claude Code
-**UI:** Русскоязычный ChatGPT-уровень
+**UI:** Русскоязычный ChatGPT-уровень + PWA для iPhone
 
 ---
 
@@ -22,57 +23,64 @@ pip3 install fastapi uvicorn sqlalchemy aiosqlite openai ollama \
 
 # 3. Запустить сервер
 uvicorn core.app:app --reload --port 8000
+# Или со скриптом (ngrok QR для iPhone):
+./scripts/start_rosa.sh
 
 # 4. Открыть в браузере
 open http://localhost:8000
 
 # 5. Запустить тесты
 python3 -m pytest tests/ -v
+# → 284 тестов ✅
+```
+
+---
+
+## Архитектура v6
+
+```
+┌─── 3-Layer Memory ────────────────────────────────────┐
+│  Working (100 turns) → Episodic (ChromaDB) → Graph    │
+└───────────────────────────────────────────────────────┘
+┌─── Local Router ──────────────────────────────────────┐
+│  Cache → Kimi K2.5 → Claude → Ollama → Stale Cache    │
+└───────────────────────────────────────────────────────┘
+┌─── Self-Improvement ──────────────────────────────────┐
+│  Metacognition → CapabilityMap → CodeGenesis           │
+└───────────────────────────────────────────────────────┘
+┌─── Transparency ──────────────────────────────────────┐
+│  ChainOfThought → UsageTracker → ImmutableKernel       │
+└───────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Возможности
 
-| Функция | Статус | Как включить |
-|---------|--------|-------------|
-| Чат с Kimi K2.5 | ✅ | `OPENROUTER_API_KEY` в .env |
-| Локальный чат (Ollama) | ✅ | Запустить Ollama + `ollama pull llama3.2` |
-| Загрузка файлов (PDF, txt) | ✅ | Кнопка 📎 в интерфейсе |
-| Парсинг URL | ✅ | Кнопка 🌐 в интерфейсе |
-| Голос (браузерный STT) | ✅ | Кнопка 🎤 (Chrome/Safari) |
-| Голос (Whisper + TTS) | ⚙️ | `OPENAI_DIRECT_KEY` в .env |
-| Граф знаний | ✅ | Вкладка «Знания» |
-| Self-improvement цикл | ✅ | Вкладка «Улучшение» → «Запустить цикл» |
-| Навыки и прогресс | ✅ | `POST /api/self-improve/skills` |
-| Пантеон моделей | ✅ | `config/models.yaml` + Настройки |
-| Telegram | 🔧 | `TELEGRAM_BOT_TOKEN` + python-telegram-bot |
-| Discord | 🔧 | `DISCORD_TOKEN` + discord.py |
-| Gmail | 🔧 | `GMAIL_CREDENTIALS` + google-api-python-client |
-| Google Drive | 🔧 | `GOOGLE_CREDENTIALS` + google-api-python-client |
-| Perplexity Computer | 🔮 | Будущее |
-
-✅ Готово · ⚙️ Нужен ключ · 🔧 Требует настройки · 🔮 Планируется
-
----
-
-## Переменные окружения (.env)
-
-```env
-# Обязательно
-OPENROUTER_API_KEY=sk-or-...
-
-# Опционально: голос (Whisper STT + TTS)
-OPENAI_DIRECT_KEY=sk-...
-
-# Опционально: Telegram
-TELEGRAM_BOT_TOKEN=...
-TELEGRAM_CHAT_ID=...
-
-# Опционально: Google (Gmail + Drive)
-GMAIL_CREDENTIALS=/path/to/credentials.json
-GOOGLE_CREDENTIALS=/path/to/credentials.json
-```
+| Функция | Статус | Блок |
+|---------|--------|------|
+| Чат с Kimi K2.5 | ✅ | Core |
+| 3-слойная память | ✅ | Block 1 |
+| Метакогниция + оценка ответов | ✅ | Block 2 |
+| CapabilityMap (20 навыков) | ✅ | Block 2 |
+| CodeGenesis (Роза пишет код) | ✅ | Block 2 |
+| VPS деплой (Docker) | ✅ | Block 3 |
+| Cloudflare Tunnel | ✅ | Block 3 |
+| KnowledgeIndexer + RAG | ✅ | Block 4 |
+| StartupAudit (<10s) | ✅ | Block 5 |
+| SelfDebugger | ✅ | Block 5 |
+| RegressionTester | ✅ | Block 5 |
+| LocalRouter + SemanticCache | ✅ | Block 6 |
+| PatternAnalyzer (профиль) | ✅ | Block 7 |
+| Утренний брифинг | ✅ | Block 7 |
+| ChainOfThought визуализация | ✅ | Block 8 |
+| UsageTracker + стоимость | ✅ | Block 8 |
+| ImmutableKernel | ✅ | Block 8 |
+| TikTok парсинг (yt-dlp) | ✅ | Integrations |
+| GitHub → граф знаний | ✅ | Integrations |
+| Telegram (Telethon) | ✅ | Integrations |
+| Web Push уведомления | ✅ | PWA |
+| iPhone PWA + QR код | ✅ | Mobile |
 
 ---
 
@@ -83,98 +91,103 @@ rosa-os/
 ├── core/
 │   ├── app.py                    # FastAPI сервер
 │   ├── config.py                 # pydantic-settings
-│   ├── api/                      # REST + WebSocket эндпоинты
-│   │   ├── chat.py, sessions.py, folders.py
-│   │   ├── files.py, voice.py, parse_url.py
-│   │   ├── tasks.py, memory.py
-│   │   ├── self_improve.py       # + Skills API (v3)
-│   │   ├── knowledge.py          # Граф знаний (v3)
-│   │   └── models.py             # Пантеон моделей (v3)
-│   ├── knowledge/
-│   │   └── graph.py              # add_insight, query_graph (v3)
+│   ├── api/                      # 30+ REST + WebSocket роутеров
 │   ├── memory/
-│   │   ├── models.py             # SQLAlchemy ORM (+ KnowledgeNode, Skill)
-│   │   └── store.py              # Async CRUD
-│   ├── router/
-│   │   ├── __init__.py           # RosaRouter (HybridRouter wrapper)
-│   │   └── models_router.py      # ModelsRouter (Pantheon) (v3)
+│   │   ├── eternal.py            # 3-layer memory [v6]
+│   │   ├── memory_injector.py    # context injection [v6]
+│   │   ├── consolidator.py       # nightly consolidation [v6]
+│   │   ├── models.py, store.py   # SQLAlchemy ORM + CRUD
+│   ├── metacognition/
+│   │   ├── evaluator.py          # response quality scoring
+│   │   ├── self_reflection.py    # per-response reflection [v6]
+│   │   ├── capability_map.py     # 20 skills tracking [v6]
+│   │   └── gap_analyzer.py       # weekly learning plan [v6]
 │   ├── self_improvement/
+│   │   ├── code_genesis.py       # Rosa writes code [v6]
 │   │   ├── collector.py, analyzer.py, patcher.py
-│   ├── integrations/
-│   │   ├── computer_use.py, vision.py
-│   │   ├── socials/              # Telegram, Discord, Twitter (v3)
-│   │   ├── mail/                 # Gmail (v3)
-│   │   └── workspace/            # Google Drive (v3)
-│   └── policies.py
+│   ├── knowledge/
+│   │   ├── indexer.py            # MD5 + watchdog [v6]
+│   │   ├── rag_engine.py         # RAG retrieval [v6]
+│   │   └── graph.py              # knowledge graph
+│   ├── audit/
+│   │   ├── startup_audit.py      # 6 checks, score [v6]
+│   │   ├── self_debugger.py      # error patterns [v6]
+│   │   └── regression_tester.py  # pytest runner [v6]
+│   ├── router/
+│   │   ├── cache_manager.py      # semantic cache [v6]
+│   │   ├── local_router.py       # 5-tier routing [v6]
+│   │   └── models_router.py      # model pantheon
+│   ├── prediction/
+│   │   ├── pattern_analyzer.py   # user profiling [v6]
+│   │   ├── proactive.py          # morning briefing
+│   │   └── habit_graph.py
+│   ├── transparency/
+│   │   ├── chain_of_thought.py   # CoT visualization [v6]
+│   │   └── usage_report.py       # token/cost tracking [v6]
+│   ├── security/
+│   │   ├── immutable_kernel.py   # file hash guard [v6]
+│   │   └── firewall.py
+│   └── integrations/
+│       ├── socials/tiktok.py     # TikTok via yt-dlp
+│       ├── socials/telegram_user.py  # Telethon
+│       └── workspace/github.py   # GitHub REST API
 ├── desktop/
-│   ├── index.html                # Русский UI (v3)
-│   ├── style.css
-│   └── app.js
-├── config/
-│   ├── models.yaml               # Пантеон моделей (v3)
-│   ├── settings.yaml
-│   └── policies.yaml
-├── tests/                        # 45 тестов (v3: +25 новых)
+│   ├── index.html, style.css, app.js  # PWA UI
+│   ├── manifest.json             # PWA manifest
+│   └── sw.js                     # Service Worker
+├── scripts/
+│   ├── start_rosa.sh             # ngrok + uvicorn
+│   ├── deploy_vps.sh             # Docker VPS deploy
+│   ├── sync_memory.sh            # rsync memory
+│   └── setup_cloudflare_tunnel.sh
+├── tests/                        # 284 тестов ✅
 ├── docs/
-│   ├── CONSTITUTION.md           # Неизменяемый
-│   ├── PLAN.md
-│   └── PLAN_v3.md               # Архитектура v3
-├── experimental/                 # Self-improvement sandbox
-├── memory/                       # SQLite DB + uploads
-└── hybrid_assistant.py           # HybridRouter (агенты)
+│   ├── CONSTITUTION.md
+│   ├── MEMORY_ARCHITECTURE.md    # [v6]
+│   ├── SELF_IMPROVEMENT.md       # [v6]
+│   ├── DEPLOYMENT_VPS.md         # [v6]
+│   └── RELEASE_v6.md             # [v6]
+├── config/
+│   ├── policies.yaml
+│   └── models.yaml
+└── Dockerfile.production         # [v6]
 ```
 
 ---
 
-## API (основные эндпоинты)
+## Ключевые API (v6)
 
 | Метод | Путь | Описание |
 |-------|------|---------|
 | WS | `/api/ws/chat` | Стриминг чата |
 | POST | `/api/chat` | Одиночный запрос |
-| GET | `/api/sessions` | Список сессий |
-| POST | `/api/files/upload` | Загрузить файл |
-| POST | `/api/parse-url` | Парсить URL |
-| POST | `/api/knowledge/insights` | Добавить инсайт в граф |
-| GET | `/api/knowledge/nodes` | Список узлов знаний |
-| GET | `/api/knowledge/graph?query=` | Поиск по графу |
-| GET | `/api/models` | Список моделей |
-| PATCH | `/api/models/{id}` | Вкл/выкл модель |
-| GET | `/api/models/strategies` | Стратегии маршрутизации |
-| POST | `/api/self-improve/run` | Запустить цикл улучшения |
-| GET | `/api/self-improve/skills` | Навыки Rosa |
-| POST | `/api/self-improve/skills` | Создать навык |
-| POST | `/api/self-improve/skills/{id}/assess` | Оценить навык |
-| GET | `/docs` | Swagger UI |
+| GET | `/api/audit/startup` | Отчёт о запуске |
+| GET | `/api/audit/debug` | Анализ ошибок |
+| GET | `/api/cache/stats` | Статистика кэша |
+| GET | `/api/prediction/profile` | Профиль пользователя |
+| GET | `/api/prediction/morning-brief` | Утренний брифинг |
+| GET | `/api/transparency/cot/recent` | Цепочки мысли |
+| GET | `/api/transparency/usage/today` | Использование токенов |
+| GET | `/api/transparency/kernel/status` | Целостность ядра |
+| POST | `/api/integrations/tiktok/analyze` | TikTok анализ |
+| POST | `/api/integrations/github/ingest` | GitHub → граф |
+| GET | `/docs` | Swagger UI (284 эндпоинта) |
 
 ---
 
-## Горячие клавиши
-
-| Комбинация | Действие |
-|-----------|---------|
-| Ctrl/Cmd+N | Новый чат |
-| Ctrl/Cmd+U | Прикрепить файл |
-| Ctrl/Cmd+M | Голосовой ввод |
-| Ctrl/Cmd+L | Режим URL |
-| Ctrl/Cmd+K | Перейти к «Знаниям» |
-| Ctrl/Cmd+Shift+L | Live-режим |
-| Escape | Закрыть модал |
-
----
-
-## Тесты
+## iPhone / Мобильный доступ
 
 ```bash
-python3 -m pytest tests/ -v
-# 45 тестов:
-# test_api.py           (6)
-# test_knowledge.py     (7)  ← v3
-# test_memory.py        (6)
-# test_models_router.py (9)  ← v3
-# test_router.py        (7)
-# test_skills.py        (9)  ← v3
+# Запустить с публичным URL и QR-кодом
+./scripts/start_rosa.sh
+
+# Или Cloudflare Tunnel (бесплатный, без лимитов)
+./scripts/setup_cloudflare_tunnel.sh
+cloudflared tunnel run rosa-os
 ```
+
+Сканируй QR-код iPhone Camera → добавь на Home Screen как PWA →
+получай Push-уведомления от Розы.
 
 ---
 
@@ -182,6 +195,16 @@ python3 -m pytest tests/ -v
 
 1. **Rosa знает свои границы** — никаких претензий на выполненное без проверки
 2. **Одобрение человека** обязательно для файлов, системных изменений, финансов
-3. **Все патчи в experimental/** — никакого тихого самоизменения
+3. **Все патчи в experimental/** — никакого тихого самоизменения ядра
 4. **Память честна** — что хранится, то видно
 5. **Внешние данные — недоверенные** — всегда
+
+---
+
+## Документация
+
+- [`docs/MEMORY_ARCHITECTURE.md`](docs/MEMORY_ARCHITECTURE.md) — 3-layer memory
+- [`docs/SELF_IMPROVEMENT.md`](docs/SELF_IMPROVEMENT.md) — metacognition cycle
+- [`docs/DEPLOYMENT_VPS.md`](docs/DEPLOYMENT_VPS.md) — Docker VPS deploy
+- [`docs/RELEASE_v6.md`](docs/RELEASE_v6.md) — release notes
+- [`docs/CONSTITUTION.md`](docs/CONSTITUTION.md) — immutable principles
