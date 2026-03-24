@@ -68,6 +68,11 @@ try:
 except Exception:
     prediction_router = None
 
+try:
+    from core.api.transparency import router as transparency_router
+except Exception:
+    transparency_router = None
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -237,6 +242,8 @@ def create_app() -> FastAPI:
         app.include_router(cache_router)
     if prediction_router:
         app.include_router(prediction_router)
+    if transparency_router:
+        app.include_router(transparency_router)
 
     # Health check
     @app.get("/health", tags=["system"])
