@@ -66,6 +66,15 @@ async def chat(req: ChatRequest) -> ChatResponse:
     except Exception as exc:
         logger.warning("Memory persistence failed: %s", exc)
 
+    # Eternal memory: remember user message and response (fire-and-forget)
+    try:
+        from core.memory.eternal import get_eternal_memory
+        mem = get_eternal_memory()
+        asyncio.create_task(mem.remember("user", req.message, source="chat", importance=0.5))
+        asyncio.create_task(mem.remember("assistant", result["response"], source="chat", importance=0.4))
+    except Exception as exc:
+        logger.debug("Eternal memory update skipped: %s", exc)
+
     return ChatResponse(
         response=result["response"],
         brain_used=result["brain_used"],

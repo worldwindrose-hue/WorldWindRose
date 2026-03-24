@@ -3,6 +3,12 @@ ROSA OS — Memory API.
 GET  /api/memory/reflections  — list reflections
 GET  /api/memory/turns        — list conversation turns
 POST /api/memory/events       — store an event
+GET  /api/memory/search       — search episodic+graph
+GET  /api/memory/graph        — graph around entity
+POST /api/memory/remember     — add to all layers
+DELETE /api/memory/forget/{id} — remove from episodic
+GET  /api/memory/context      — session context
+GET  /api/memory/stats        — memory counts
 """
 
 from __future__ import annotations
@@ -37,6 +43,11 @@ class EventIn(BaseModel):
     description: str
     severity: str = "info"   # "info" | "warning" | "high" | "critical"
     task_id: str | None = None
+
+
+class RememberIn(BaseModel):
+    text: str
+    importance: float = 0.5
 
 
 @router.get("/reflections", response_model=list[ReflectionOut])
@@ -85,3 +96,86 @@ async def store_event(body: EventIn) -> dict:
         task_id=body.task_id,
     )
     return {"id": str(event.id), "status": "stored"}
+
+
+@router.get("/search")
+async def search_memory(q: str = "", limit: int = 10) -> dict:
+    """Search episodic and graph memory."""
+    if not q:
+        return {"episodic": [], "graph": []}
+    try:
+        from core.memory.eternal import get_eternal_memory
+        mem = get_eternal_memory()
+        episodic = await mem.episodic.search(q, top_k=limit)
+        graph = await mem.graph.query(q)
+        return {"episodic": episodic, "graph": graph}
+    except Exception as exc:
+        logger.warning("Memory search failed: %s", exc)
+        return {"episodic": [], "graph": [], "error": str(exc)}
+
+
+@router.get("/graph")
+async def get_graph(entity: str = "") -> dict:
+    """Get graph around a given entity."""
+    if not entity:
+        return {"nodes": [], "edges": []}
+    try:
+        from core.memory.eternal import get_eternal_memory
+        mem = get_eternal_memory()
+        results = await mem.graph.query(entity)
+        return {"entity": entity, "relations": results}
+    except Exception as exc:
+        logger.warning("Graph query failed: %s", exc)
+        return {"entity": entity, "relations": [], "error": str(exc)}
+
+
+@router.post("/remember", status_code=201)
+async def remember(body: RememberIn) -> dict:
+    """Add text to all memory layers."""
+    try:
+        from core.memory.eternal import get_eternal_memory
+        mem = get_eternal_memory()
+        await mem.remember("user", body.text, source="api", importance=body.importance)
+        return {"status": "remembered", "importance": body.importance}
+    except Exception as exc:
+        logger.warning("Remember failed: %s", exc)
+        return {"status": "error", "error": str(exc)}
+
+
+@router.delete("/forget/{entry_id}")
+async def forget(entry_id: str) -> dict:
+    """Remove an entry from episodic memory."""
+    try:
+        from core.memory.eternal import get_eternal_memory
+        mem = get_eternal_memory()
+        ok = await mem.episodic.delete(entry_id)
+        return {"status": "deleted" if ok else "not_found", "id": entry_id}
+    except Exception as exc:
+        logger.warning("Forget failed: %s", exc)
+        return {"status": "error", "error": str(exc)}
+
+
+@router.get("/context")
+async def get_context() -> dict:
+    """Get current session context."""
+    try:
+        from core.memory.eternal import get_eternal_memory
+        mem = get_eternal_memory()
+        ctx = await mem.context.load()
+        return {"context": ctx}
+    except Exception as exc:
+        logger.warning("Context load failed: %s", exc)
+        return {"context": {}, "error": str(exc)}
+
+
+@router.get("/stats")
+async def memory_stats() -> dict:
+    """Get memory statistics."""
+    try:
+        from core.memory.eternal import get_eternal_memory
+        mem = get_eternal_memory()
+        stats = await mem.stats()
+        return stats
+    except Exception as exc:
+        logger.warning("Memory stats failed: %s", exc)
+        return {"error": str(exc)}
