@@ -30,6 +30,13 @@ from core.api.voice import router as voice_router
 from core.api.parse_url import router as parse_url_router
 from core.api.knowledge import router as knowledge_router
 from core.api.models import router as models_router
+from core.api.integrations import router as integrations_router
+from core.api.metacognition import router as metacognition_router
+from core.api.projects import router as projects_router
+from core.api.agents import router as agents_router
+from core.api.pal import router as pal_router
+from core.api.proactive import router as proactive_router
+from core.api.vision import router as vision_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,7 +63,22 @@ async def lifespan(app: FastAPI):
     # Ensure upload directory exists
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
 
+    # Start proactive scheduler
+    try:
+        from core.prediction.proactive import start_scheduler
+        start_scheduler()
+        logger.info("Proactive scheduler started")
+    except Exception as exc:
+        logger.warning("Proactive scheduler failed to start: %s", exc)
+
     yield
+
+    # Stop proactive scheduler on shutdown
+    try:
+        from core.prediction.proactive import stop_scheduler
+        stop_scheduler()
+    except Exception:
+        pass
 
     logger.info("ROSA OS shutting down")
 
@@ -92,6 +114,13 @@ def create_app() -> FastAPI:
     app.include_router(parse_url_router)
     app.include_router(knowledge_router)
     app.include_router(models_router)
+    app.include_router(integrations_router)
+    app.include_router(metacognition_router)
+    app.include_router(projects_router)
+    app.include_router(agents_router)
+    app.include_router(pal_router)
+    app.include_router(proactive_router)
+    app.include_router(vision_router)
 
     # Health check
     @app.get("/health", tags=["system"])

@@ -162,3 +162,76 @@ class SkillProgress(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     assessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     assessed_by: Mapped[str] = mapped_column(String(32), default="auto")  # auto|owner
+
+
+# ── v4 models (Metacognition + Projects + Prediction) ────────────────────────
+
+
+class ResponseQuality(Base):
+    """Post-response metacognitive quality assessment by Kimi K2.5."""
+    __tablename__ = "response_quality"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    session_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    response: Mapped[str] = mapped_column(Text, nullable=False)
+    completeness: Mapped[float] = mapped_column(Float, default=5.0)  # 1-10
+    accuracy: Mapped[float] = mapped_column(Float, default=5.0)
+    helpfulness: Mapped[float] = mapped_column(Float, default=5.0)
+    overall: Mapped[float] = mapped_column(Float, default=5.0)
+    weak_points: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON list
+    improvement_hint: Mapped[str | None] = mapped_column(Text, nullable=True)
+    assessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Project(Base):
+    """A project with goal and deadline."""
+    __tablename__ = "projects"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    goal: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="active")  # active|paused|done
+    deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class ProjectTask(Base):
+    """A task belonging to a project."""
+    __tablename__ = "project_tasks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id"), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    priority: Mapped[int] = mapped_column(Integer, default=2)  # 1=high 2=medium 3=low
+    done: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class HabitEvent(Base):
+    """Records each interaction for habit/pattern analysis."""
+    __tablename__ = "habit_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    hour_of_day: Mapped[int] = mapped_column(Integer, nullable=False)   # 0-23
+    day_of_week: Mapped[int] = mapped_column(Integer, nullable=False)   # 0=Mon 6=Sun
+    task_type: Mapped[str] = mapped_column(String(64), nullable=False)  # coding/research/chat/etc
+    model_used: Mapped[str] = mapped_column(String(128), default="")
+    session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class ProactiveSubscription(Base):
+    """A proactive data subscription (topic/source to monitor)."""
+    __tablename__ = "proactive_subscriptions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    source_type: Mapped[str] = mapped_column(String(32), nullable=False)  # rss|keyword|github|telegram
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    keywords: Mapped[str | None] = mapped_column(Text, nullable=True)   # JSON list
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_checked: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

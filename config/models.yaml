@@ -1,4 +1,4 @@
-# ROSA OS v3 — Model Pantheon Configuration
+# ROSA OS v4 — Model Pantheon Configuration
 # Each model entry describes capabilities, cost tier, and enable/disable flag.
 # Disabled models (enabled: false) are shown in the UI but not called.
 
@@ -8,10 +8,11 @@ models:
     model_id: moonshotai/kimi-k2.5
     display_name: "Kimi K2.5"
     icon: "🌙"
-    strengths: [reasoning, coding, long_context, russian, analysis]
+    strengths: [reasoning, coding, long_context, russian, analysis, math]
     context_window: 131072
     cost_tier: medium
     enabled: true
+    task_affinity: [SIMPLE_CHAT, COMPLEX_REASONING, CREATIVE_WRITING, CODE_REVIEW, DATA_ANALYSIS]
     notes: "Rosa's primary brain — strong Russian support, long context"
 
   claude_sonnet:
@@ -23,6 +24,7 @@ models:
     context_window: 200000
     cost_tier: high
     enabled: true
+    task_affinity: [CODE_GENERATION, CODE_REVIEW, STRUCTURED_OUTPUT, DOCUMENT_ANALYSIS]
     notes: "Excellent for code review, structured tasks, and debate synthesis"
 
   gemini_flash:
@@ -33,8 +35,8 @@ models:
     strengths: [speed, vision, long_context, multimodal]
     context_window: 1000000
     cost_tier: low
-    enabled: false
-    env_key: OPENROUTER_API_KEY
+    enabled: true
+    task_affinity: [VISION_ANALYSIS, PDF_ANALYSIS, FAST_RESPONSE, MULTIMODAL]
     notes: "Ultra-fast, good for image analysis and long document processing"
 
   gpt_4o:
@@ -46,6 +48,7 @@ models:
     context_window: 128000
     cost_tier: high
     enabled: false
+    task_affinity: [VISION_ANALYSIS, TOOL_USE, GENERAL]
     env_key: OPENROUTER_API_KEY
     notes: "OpenAI flagship — strong vision and tool calling"
 
@@ -58,6 +61,7 @@ models:
     context_window: 131072
     cost_tier: high
     enabled: false
+    task_affinity: [CURRENT_EVENTS, RESEARCH, REASONING]
     env_key: OPENROUTER_API_KEY
     notes: "xAI model — real-time internet access, strong reasoning"
 
@@ -70,6 +74,7 @@ models:
     context_window: 28000
     cost_tier: medium
     enabled: false
+    task_affinity: [WEB_SEARCH, RESEARCH, CITATIONS, CURRENT_EVENTS]
     env_key: OPENROUTER_API_KEY
     notes: "Search-augmented — great for current events and research with citations"
 
@@ -82,6 +87,7 @@ models:
     context_window: 128000
     cost_tier: free
     enabled: true
+    task_affinity: [PRIVATE_FILE, OFFLINE, LOCAL_ONLY]
     notes: "Local model via Ollama — zero cost, full privacy, no internet needed"
 
 # Routing strategies determine which models to use and how to combine them.
@@ -103,3 +109,25 @@ routing_strategies:
     primary: llama3_local
     fallback: kimi_k2_5
     max_models: 1
+
+  ensemble:
+    description: "Ансамбль — параллельные вызовы, синтез лучших"
+    models: [kimi_k2_5, claude_sonnet, gemini_flash]
+    synthesizer: kimi_k2_5
+    voting: majority
+    max_models: 3
+
+  task_routing:
+    description: "Маршрутизация по типу задачи"
+    rules:
+      - task_type: CODE_GENERATION
+        model: claude_sonnet
+      - task_type: WEB_SEARCH
+        model: perplexity_sonar
+        fallback: kimi_k2_5
+      - task_type: VISION_ANALYSIS
+        model: gemini_flash
+      - task_type: PRIVATE_FILE
+        model: llama3_local
+      - task_type: default
+        model: kimi_k2_5

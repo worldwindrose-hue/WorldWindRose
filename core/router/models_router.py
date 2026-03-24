@@ -1,10 +1,12 @@
 """
-ROSA OS v3 — Models Router (Model Pantheon).
+ROSA OS v4 — Models Router (Model Pantheon).
 
-Reads config/models.yaml, provides three routing strategies:
-- fast:    one model (default Kimi K2.5)
-- quality: debate between two models, synthesized by Kimi
-- privacy: prefer local/offline model, fallback to Kimi
+Reads config/models.yaml, provides routing strategies:
+- fast:         one model (default Kimi K2.5)
+- quality:      debate between two models, synthesized by Kimi
+- privacy:      prefer local/offline model, fallback to Kimi
+- ensemble:     parallel calls to 3 models, synthesized
+- task_routing: model chosen by task type
 """
 
 from __future__ import annotations
@@ -129,6 +131,10 @@ class ModelsRouter:
             return await self._quality_route(task_text, strat, session_id)
         elif strategy == "privacy":
             return await self._privacy_route(task_text, strat, session_id)
+        elif strategy == "ensemble":
+            return await self._ensemble_route(task_text, strat, session_id)
+        elif strategy == "task_routing":
+            return await self._task_routing(task_text, strat, session_id)
         else:
             return await self._fast_route(task_text, strat, session_id)
 
@@ -255,6 +261,108 @@ class ModelsRouter:
             "models_used": [used],
             "strategy": "privacy",
         }
+
+    async def _ensemble_route(self, task: str, strat: dict, session_id: str | None) -> dict:
+        """
+        Parallel calls to multiple models, then synthesis.
+        All enabled models in strat['models'] are called concurrently.
+        """
+        import asyncio
+        model_keys = strat.get("models", ["kimi_k2_5", "claude_sonnet"])
+        synth_key = strat.get("synthesizer", "kimi_k2_5")
+        msgs = [{"role": "user", "content": task}]
+
+        # Call all models in parallel
+        async def call_one(key: str) -> tuple[str, str]:
+            try:
+                r = await self._call_model(key, msgs)
+                return key, r
+            except Exception as exc:
+                return key, f"[Ошибка {key}: {exc}]"
+
+        results = await asyncio.gather(*[call_one(k) for k in model_keys])
+        responses_dict = dict(results)
+
+        # Build synthesis prompt
+        parts = "\n\n".join(
+            f"**{key}:** {resp}" for key, resp in responses_dict.items()
+        )
+        synth_prompt = (
+            f"Вот ответы от {len(responses_dict)} моделей на один вопрос:\n\n"
+            f"{parts}\n\n"
+            "Синтезируй лучший финальный ответ: возьми наиболее точные части каждого, "
+            "устрани противоречия, будь лаконичен."
+        )
+        try:
+            final = await self._call_model(synth_key, [{"role": "user", "content": synth_prompt}])
+        except Exception:
+            # Fallback: return best single response
+            final = next(iter(responses_dict.values()))
+
+        return {
+            "response": final,
+            "models_used": list(model_keys),
+            "strategy": "ensemble",
+            "ensemble_responses": responses_dict,
+        }
+
+    async def _task_routing(self, task: str, strat: dict, session_id: str | None) -> dict:
+        """
+        Route by task type using rules from config.
+        Falls back to default model if no match.
+        """
+        from core.router import get_router
+        # Classify task type
+        try:
+            rosa = get_router()
+            task_type = rosa._router.classify_task(task).task_type.value
+        except Exception:
+            task_type = "SIMPLE_CHAT"
+
+        rules = strat.get("rules", [])
+        model_key = "kimi_k2_5"
+        fallback_key = "kimi_k2_5"
+
+        for rule in rules:
+            rt = rule.get("task_type", "")
+            if rt == "default":
+                fallback_key = rule.get("model", "kimi_k2_5")
+            elif rt == task_type:
+                model_key = rule.get("model", "kimi_k2_5")
+                fallback_key = rule.get("fallback", model_key)
+                break
+
+        msgs = [{"role": "user", "content": task}]
+        try:
+            response = await self._call_model(model_key, msgs)
+            used = model_key
+        except Exception:
+            try:
+                response = await self._call_model(fallback_key, msgs)
+                used = fallback_key
+            except Exception as exc:
+                response = f"[Ошибка: {exc}]"
+                used = fallback_key
+
+        return {
+            "response": response,
+            "models_used": [used],
+            "strategy": "task_routing",
+            "task_type_detected": task_type,
+        }
+
+    def get_model_for_task(self, task_type: str) -> str:
+        """Return the best enabled model_id for a given task type."""
+        models = self._config.get("models", {})
+        for key, m in models.items():
+            if not m.get("enabled", False):
+                continue
+            affinities = m.get("task_affinity", [])
+            if task_type in affinities:
+                return m.get("model_id", key)
+        # Default to Kimi K2.5
+        kimi = models.get("kimi_k2_5", {})
+        return kimi.get("model_id", "moonshotai/kimi-k2.5")
 
 
 # Singleton

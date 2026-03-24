@@ -6,6 +6,7 @@ WS   /api/ws/chat     — streaming WebSocket chat
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 import logging
@@ -120,7 +121,7 @@ async def ws_chat(websocket: WebSocket, session_id: str | None = None) -> None:
                     "session_id": session_id,
                 })
 
-                # Persist
+                # Persist + metacognition (fire-and-forget)
                 try:
                     from core.memory.store import get_store
                     store = await get_store()
@@ -133,6 +134,15 @@ async def ws_chat(websocket: WebSocket, session_id: str | None = None) -> None:
                     )
                 except Exception as exc:
                     logger.warning("Memory persistence failed: %s", exc)
+
+                # Metacognitive self-evaluation — runs in background
+                try:
+                    from core.metacognition.evaluator import evaluate_response
+                    asyncio.create_task(
+                        evaluate_response(message, result["response"], session_id)
+                    )
+                except Exception:
+                    pass
 
             except Exception as exc:
                 logger.error("Chat error: %s", exc)

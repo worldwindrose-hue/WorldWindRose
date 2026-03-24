@@ -1162,3 +1162,253 @@ async function boot() {
 }
 
 boot();
+
+// ── SWARM VIEW ────────────────────────────────────────────────────────────────
+
+async function runSwarm() {
+  const task = $("#swarm-task-input").value.trim();
+  if (!task) return;
+
+  const checkedRoles = [...document.querySelectorAll(".swarm-roles input:checked")].map(el => el.value);
+  const status = $("#swarm-status");
+  const synthesis = $("#swarm-synthesis");
+  const agentResults = $("#swarm-agent-results");
+
+  status.classList.remove("hidden");
+  synthesis.innerHTML = "<p class='empty-state'>⟳ Агенты работают…</p>";
+
+  try {
+    const resp = await apiFetch("/api/agents/swarm", {
+      method: "POST",
+      body: JSON.stringify({ task, roles: checkedRoles }),
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      synthesis.innerHTML = marked ? marked.parse(data.synthesis || "") : data.synthesis || "";
+      if (data.agent_results && data.agent_results.length > 0) {
+        agentResults.classList.remove("hidden");
+        agentResults.innerHTML = data.agent_results.map(r =>
+          `<div class="agent-result-card"><strong>${r.role}</strong>: ${r.result ? r.result.substring(0, 200) + "…" : "Нет ответа"}</div>`
+        ).join("");
+      }
+    } else {
+      synthesis.innerHTML = "<p class='error-state'>Ошибка запуска роя.</p>";
+    }
+  } catch(e) {
+    synthesis.innerHTML = `<p class='error-state'>${e.message}</p>`;
+  } finally {
+    status.classList.add("hidden");
+  }
+}
+
+async function generateContent() {
+  const topic = $("#content-topic").value.trim();
+  const contentType = $("#content-type").value;
+  if (!topic) return;
+
+  const btn = $("#content-generate-btn");
+  btn.textContent = "⟳ Создание…";
+  btn.disabled = true;
+
+  try {
+    const resp = await apiFetch("/api/agents/content", {
+      method: "POST",
+      body: JSON.stringify({ topic, content_type: contentType, research: false }),
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      const result = $("#content-result");
+      result.classList.remove("hidden");
+      result.innerHTML = `<h4>${data.topic}</h4><div class="content-final">${marked ? marked.parse(data.final || "") : data.final}</div>`;
+    }
+  } catch(e) {
+    console.error("Content generation failed:", e);
+  } finally {
+    btn.textContent = "Создать контент";
+    btn.disabled = false;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Swarm
+  const swarmRunBtn = $("#swarm-run-btn");
+  if (swarmRunBtn) swarmRunBtn.addEventListener("click", runSwarm);
+  const contentGenBtn = $("#content-generate-btn");
+  if (contentGenBtn) contentGenBtn.addEventListener("click", generateContent);
+
+  // Projects
+  loadProjects();
+  const newProjectBtn = $("#new-project-btn");
+  if (newProjectBtn) newProjectBtn.addEventListener("click", () => {
+    $("#new-project-form").classList.toggle("hidden");
+  });
+  const createProjectBtn = $("#create-project-btn");
+  if (createProjectBtn) createProjectBtn.addEventListener("click", createProject);
+  const cancelProjectBtn = $("#cancel-project-btn");
+  if (cancelProjectBtn) cancelProjectBtn.addEventListener("click", () => {
+    $("#new-project-form").classList.add("hidden");
+  });
+
+  // Ouroboros
+  const ouroborosBtn = $("#ouroboros-btn");
+  if (ouroborosBtn) ouroborosBtn.addEventListener("click", runOuroboros);
+
+  // Load quality stats when improvement view is opened
+  const navBtns = document.querySelectorAll(".bottom-nav-btn[data-view='selfimprove']");
+  navBtns.forEach(btn => btn.addEventListener("click", loadQualityStats));
+});
+
+// ── PROJECTS VIEW ─────────────────────────────────────────────────────────────
+
+async function loadProjects() {
+  const list = $("#projects-list");
+  if (!list) return;
+  try {
+    const resp = await apiFetch("/api/projects");
+    if (!resp.ok) return;
+    const projects = await resp.json();
+    if (projects.length === 0) {
+      list.innerHTML = "<p class='empty-state'>Нет проектов. Создайте первый!</p>";
+      return;
+    }
+    list.innerHTML = projects.map(p => `
+      <div class="project-card" data-id="${p.id}">
+        <div class="project-card-name">${p.name}</div>
+        <div class="project-card-status badge badge-mode">${p.status || "active"}</div>
+        ${p.goal ? `<div class="project-card-goal">${p.goal.substring(0, 60)}…</div>` : ""}
+      </div>
+    `).join("");
+    list.querySelectorAll(".project-card").forEach(card => {
+      card.addEventListener("click", () => openProject(card.dataset.id));
+    });
+  } catch(e) {
+    console.error("Load projects failed:", e);
+  }
+}
+
+async function openProject(projectId) {
+  const detail = $("#project-detail");
+  if (!detail) return;
+  try {
+    const resp = await apiFetch(`/api/projects/${projectId}`);
+    if (!resp.ok) return;
+    const p = await resp.json();
+    const tasks = p.tasks || [];
+    detail.innerHTML = `
+      <div class="project-header">
+        <h3>${p.name}</h3>
+        <span class="badge badge-mode">${p.status || "active"}</span>
+      </div>
+      ${p.goal ? `<p class="project-goal">${p.goal}</p>` : ""}
+      <div class="project-progress">
+        <div class="progress-bar"><div class="progress-fill" style="width:${p.progress || 0}%"></div></div>
+        <span>${p.progress || 0}% завершено</span>
+      </div>
+      <h4>Задачи (${tasks.length})</h4>
+      <div class="task-list">
+        ${tasks.map(t => `
+          <div class="task-item ${t.done ? "done" : ""}">
+            <input type="checkbox" ${t.done ? "checked" : ""} data-task-id="${t.id}">
+            <span>${t.description}</span>
+            <span class="priority-badge p${t.priority}">P${t.priority}</span>
+          </div>
+        `).join("") || "<p class='empty-state'>Нет задач</p>"}
+      </div>
+      <div class="add-task-form">
+        <input type="text" id="new-task-input" placeholder="Новая задача…" />
+        <select id="new-task-priority"><option value="1">P1</option><option value="2" selected>P2</option><option value="3">P3</option></select>
+        <button onclick="addTask('${p.id}')">Добавить</button>
+      </div>
+    `;
+    detail.querySelectorAll("input[type=checkbox][data-task-id]").forEach(cb => {
+      cb.addEventListener("change", () => {
+        if (cb.checked) completeTask(cb.dataset.taskId).then(() => openProject(projectId));
+      });
+    });
+  } catch(e) {
+    console.error("Open project failed:", e);
+  }
+}
+
+async function createProject() {
+  const name = $("#project-name").value.trim();
+  const goal = $("#project-goal").value.trim();
+  const deadline = $("#project-deadline").value;
+  if (!name) return;
+  try {
+    const resp = await apiFetch("/api/projects", {
+      method: "POST",
+      body: JSON.stringify({ name, goal, deadline: deadline || null }),
+    });
+    if (resp.ok) {
+      $("#new-project-form").classList.add("hidden");
+      $("#project-name").value = "";
+      $("#project-goal").value = "";
+      await loadProjects();
+    }
+  } catch(e) { console.error(e); }
+}
+
+async function addTask(projectId) {
+  const desc = $("#new-task-input").value.trim();
+  const priority = parseInt($("#new-task-priority").value);
+  if (!desc) return;
+  try {
+    const resp = await apiFetch(`/api/projects/${projectId}/tasks`, {
+      method: "POST",
+      body: JSON.stringify({ description: desc, priority }),
+    });
+    if (resp.ok) openProject(projectId);
+  } catch(e) { console.error(e); }
+}
+
+async function completeTask(taskId) {
+  await apiFetch(`/api/projects/tasks/${taskId}/complete`, { method: "PATCH" });
+}
+
+// ── QUALITY STATS ─────────────────────────────────────────────────────────────
+
+async function loadQualityStats() {
+  try {
+    const resp = await apiFetch("/api/metacognition/stats");
+    if (!resp.ok) return;
+    const stats = await resp.json();
+    const metrics = ["completeness", "accuracy", "helpfulness", "overall"];
+    for (const m of metrics) {
+      const val = stats[m + "_avg"] || 0;
+      const pct = (val / 10) * 100;
+      const bar = $(`#q-${m}`);
+      const valEl = $(`#q-${m}-val`);
+      if (bar) bar.style.width = pct + "%";
+      if (valEl) valEl.textContent = val ? val.toFixed(1) + "/10" : "—";
+    }
+    const weakPoints = stats.top_weak_points || [];
+    if (weakPoints.length > 0) {
+      const section = $("#weak-points-section");
+      const list = $("#weak-points-list");
+      if (section) section.classList.remove("hidden");
+      if (list) list.innerHTML = weakPoints.map(w =>
+        `<span class="weak-tag">${w}</span>`
+      ).join(" ");
+    }
+  } catch(e) {
+    console.error("Quality stats failed:", e);
+  }
+}
+
+// ── OUROBOROS CYCLE ───────────────────────────────────────────────────────────
+
+async function runOuroboros() {
+  const btn = $("#ouroboros-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "⟳ Цикл…"; }
+  try {
+    const resp = await apiFetch("/api/self-improve/run", { method: "POST" });
+    if (resp.ok) {
+      showNotification("🐍 Цикл Уроборос запущен!");
+      await loadQualityStats();
+    }
+  } catch(e) { console.error(e); }
+  finally {
+    if (btn) { btn.disabled = false; btn.textContent = "🐍 Уроборос"; }
+  }
+}

@@ -16,6 +16,7 @@ from core.memory.models import (
     Base, Task, Event, Reflection, ConversationTurn,
     Folder, ChatSession, UploadedFile,
     KnowledgeNode, KnowledgeEdge, Skill, SkillProgress,
+    ResponseQuality, Project, ProjectTask, HabitEvent, ProactiveSubscription,
 )
 
 logger = logging.getLogger("rosa.memory.store")
@@ -525,6 +526,213 @@ class MemoryStore:
     async def get_latest_skill_progress(self, skill_id: str) -> SkillProgress | None:
         history = await self.get_skill_history(skill_id, limit=1)
         return history[0] if history else None
+
+    # ── v4: ResponseQuality ───────────────────────────────────────────────────
+
+    async def save_quality(
+        self,
+        session_id: str,
+        message: str,
+        response: str,
+        completeness: float,
+        accuracy: float,
+        helpfulness: float,
+        overall: float,
+        weak_points: str | None = None,
+        improvement_hint: str | None = None,
+    ) -> ResponseQuality:
+        async with self._sf() as session:
+            rq = ResponseQuality(
+                session_id=session_id,
+                message=message[:2000],
+                response=response[:4000],
+                completeness=completeness,
+                accuracy=accuracy,
+                helpfulness=helpfulness,
+                overall=overall,
+                weak_points=weak_points,
+                improvement_hint=improvement_hint,
+            )
+            session.add(rq)
+            await session.commit()
+            await session.refresh(rq)
+            return rq
+
+    async def list_quality(
+        self,
+        session_id: str | None = None,
+        min_overall: float | None = None,
+        limit: int = 50,
+    ) -> list[ResponseQuality]:
+        async with self._sf() as session:
+            stmt = select(ResponseQuality).order_by(desc(ResponseQuality.assessed_at))
+            if session_id:
+                stmt = stmt.where(ResponseQuality.session_id == session_id)
+            if min_overall is not None:
+                stmt = stmt.where(ResponseQuality.overall >= min_overall)
+            stmt = stmt.limit(limit)
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    async def get_quality_stats(self) -> dict:
+        """Return average scores and top weak_points from the last 200 assessments."""
+        import json
+        records = await self.list_quality(limit=200)
+        if not records:
+            return {
+                "count": 0,
+                "completeness_avg": 0.0,
+                "accuracy_avg": 0.0,
+                "helpfulness_avg": 0.0,
+                "overall_avg": 0.0,
+                "top_weak_points": [],
+            }
+        n = len(records)
+        wp_counts: dict[str, int] = {}
+        for r in records:
+            if r.weak_points:
+                try:
+                    for wp in json.loads(r.weak_points):
+                        wp_counts[wp] = wp_counts.get(wp, 0) + 1
+                except Exception:
+                    pass
+        top_wp = sorted(wp_counts.items(), key=lambda x: -x[1])[:5]
+        return {
+            "count": n,
+            "completeness_avg": round(sum(r.completeness for r in records) / n, 2),
+            "accuracy_avg": round(sum(r.accuracy for r in records) / n, 2),
+            "helpfulness_avg": round(sum(r.helpfulness for r in records) / n, 2),
+            "overall_avg": round(sum(r.overall for r in records) / n, 2),
+            "top_weak_points": [{"point": k, "count": v} for k, v in top_wp],
+        }
+
+    async def get_weak_responses(self, min_overall: float = 5.0, limit: int = 20) -> list[ResponseQuality]:
+        return await self.list_quality(min_overall=None, limit=limit * 3)
+
+    # ── v4: Projects ──────────────────────────────────────────────────────────
+
+    async def create_project(self, name: str, goal: str | None = None, deadline=None) -> Project:
+        async with self._sf() as session:
+            p = Project(name=name, goal=goal, deadline=deadline)
+            session.add(p)
+            await session.commit()
+            await session.refresh(p)
+            return p
+
+    async def list_projects(self, status: str | None = None) -> list[Project]:
+        async with self._sf() as session:
+            stmt = select(Project).order_by(desc(Project.created_at))
+            if status:
+                stmt = stmt.where(Project.status == status)
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    async def get_project(self, project_id: str) -> Project | None:
+        async with self._sf() as session:
+            result = await session.execute(select(Project).where(Project.id == project_id))
+            return result.scalar_one_or_none()
+
+    async def update_project(self, project_id: str, **kwargs) -> Project | None:
+        async with self._sf() as session:
+            result = await session.execute(select(Project).where(Project.id == project_id))
+            p = result.scalar_one_or_none()
+            if p:
+                for k, v in kwargs.items():
+                    setattr(p, k, v)
+                await session.commit()
+                await session.refresh(p)
+            return p
+
+    async def create_project_task(
+        self, project_id: str, description: str, priority: int = 2
+    ) -> ProjectTask:
+        async with self._sf() as session:
+            t = ProjectTask(project_id=project_id, description=description, priority=priority)
+            session.add(t)
+            await session.commit()
+            await session.refresh(t)
+            return t
+
+    async def list_project_tasks(self, project_id: str) -> list[ProjectTask]:
+        async with self._sf() as session:
+            stmt = (
+                select(ProjectTask)
+                .where(ProjectTask.project_id == project_id)
+                .order_by(ProjectTask.priority, ProjectTask.created_at)
+            )
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    async def update_project_task(self, task_id: str, **kwargs) -> ProjectTask | None:
+        async with self._sf() as session:
+            result = await session.execute(select(ProjectTask).where(ProjectTask.id == task_id))
+            t = result.scalar_one_or_none()
+            if t:
+                for k, v in kwargs.items():
+                    setattr(t, k, v)
+                await session.commit()
+                await session.refresh(t)
+            return t
+
+    # ── v4: HabitEvents ───────────────────────────────────────────────────────
+
+    async def record_habit_event(
+        self, task_type: str, model_used: str = "", session_id: str | None = None
+    ) -> HabitEvent:
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        async with self._sf() as session:
+            ev = HabitEvent(
+                hour_of_day=now.hour,
+                day_of_week=now.weekday(),
+                task_type=task_type,
+                model_used=model_used,
+                session_id=session_id,
+            )
+            session.add(ev)
+            await session.commit()
+            await session.refresh(ev)
+            return ev
+
+    async def get_habit_events(self, limit: int = 500) -> list[HabitEvent]:
+        async with self._sf() as session:
+            stmt = select(HabitEvent).order_by(desc(HabitEvent.created_at)).limit(limit)
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    # ── v4: ProactiveSubscriptions ────────────────────────────────────────────
+
+    async def create_subscription(
+        self, name: str, source_type: str, source_url: str | None = None, keywords: str | None = None
+    ) -> ProactiveSubscription:
+        async with self._sf() as session:
+            sub = ProactiveSubscription(
+                name=name, source_type=source_type, source_url=source_url, keywords=keywords
+            )
+            session.add(sub)
+            await session.commit()
+            await session.refresh(sub)
+            return sub
+
+    async def list_subscriptions(self, enabled_only: bool = True) -> list[ProactiveSubscription]:
+        async with self._sf() as session:
+            stmt = select(ProactiveSubscription).order_by(ProactiveSubscription.name)
+            if enabled_only:
+                stmt = stmt.where(ProactiveSubscription.enabled == True)  # noqa: E712
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    async def touch_subscription(self, sub_id: str) -> None:
+        """Update last_checked timestamp."""
+        from datetime import datetime, timezone
+        async with self._sf() as session:
+            result = await session.execute(
+                select(ProactiveSubscription).where(ProactiveSubscription.id == sub_id)
+            )
+            sub = result.scalar_one_or_none()
+            if sub:
+                sub.last_checked = datetime.now(timezone.utc)
+                await session.commit()
 
 
 # Module-level singleton

@@ -32,8 +32,14 @@
       <button class="bottom-nav-btn active" data-view="chat" title="Чат">
         💬 <span>Чат</span>
       </button>
+      <button class="bottom-nav-btn" data-view="swarm" title="Рой агентов">
+        🐝 <span>Рой</span>
+      </button>
       <button class="bottom-nav-btn" data-view="knowledge" title="Граф знаний">
         🧠 <span>Знания</span>
+      </button>
+      <button class="bottom-nav-btn" data-view="projects" title="Проекты">
+        📁 <span>Проекты</span>
       </button>
       <button class="bottom-nav-btn" data-view="selfimprove" title="Улучшение">
         🔬 <span>Улучшение</span>
@@ -116,6 +122,86 @@
       <input type="file" id="file-input" multiple accept="*/*" style="display:none" />
     </div><!-- /view-chat -->
 
+    <!-- ВИД: РОЙ АГЕНТОВ -->
+    <div id="view-swarm" class="view">
+      <div class="view-header">
+        <h2>🐝 Рой агентов</h2>
+        <div class="view-header-actions">
+          <button id="swarm-run-btn" class="btn-primary">▶ Запустить рой</button>
+        </div>
+      </div>
+      <div class="swarm-layout">
+        <div class="swarm-col">
+          <h3>Задача для роя</h3>
+          <textarea id="swarm-task-input" rows="4" placeholder="Опишите задачу для нескольких агентов…"></textarea>
+          <div class="swarm-roles">
+            <label><input type="checkbox" value="researcher" checked> 🔍 Исследователь</label>
+            <label><input type="checkbox" value="analyst" checked> 📊 Аналитик</label>
+            <label><input type="checkbox" value="writer" checked> ✍️ Автор</label>
+            <label><input type="checkbox" value="critic"> 🎯 Критик</label>
+          </div>
+          <div id="swarm-status" class="swarm-status hidden">
+            <span class="spinner">⟳</span> Агенты работают…
+          </div>
+        </div>
+        <div class="swarm-col swarm-result-col">
+          <h3>Синтез</h3>
+          <div id="swarm-synthesis" class="swarm-synthesis">
+            <p class="empty-state">Результат появится здесь после запуска роя.</p>
+          </div>
+          <div id="swarm-agent-results" class="swarm-agent-results hidden"></div>
+        </div>
+      </div>
+      <div class="swarm-content-section">
+        <h3>Контент-пайплайн</h3>
+        <div class="content-form">
+          <input id="content-topic" type="text" placeholder="Тема контента…" />
+          <select id="content-type">
+            <option value="blog_post">📝 Блог-пост</option>
+            <option value="social_post">📱 Соцсети</option>
+            <option value="summary">📋 Резюме</option>
+            <option value="script">🎬 Скрипт</option>
+            <option value="email">📧 Email</option>
+          </select>
+          <button id="content-generate-btn" class="btn-secondary">Создать контент</button>
+        </div>
+        <div id="content-result" class="content-result hidden"></div>
+      </div>
+    </div><!-- /view-swarm -->
+
+    <!-- ВИД: ПРОЕКТЫ -->
+    <div id="view-projects" class="view">
+      <div class="view-header">
+        <h2>📁 Проекты</h2>
+        <div class="view-header-actions">
+          <button id="new-project-btn" class="btn-primary">+ Новый проект</button>
+        </div>
+      </div>
+      <div class="projects-layout">
+        <div class="projects-list-col">
+          <div id="projects-list" class="projects-list">
+            <p class="empty-state">Нет проектов. Создайте первый!</p>
+          </div>
+        </div>
+        <div class="project-detail-col">
+          <div id="project-detail" class="project-detail">
+            <p class="empty-state">Выберите проект слева.</p>
+          </div>
+        </div>
+      </div>
+      <!-- Форма создания проекта -->
+      <div id="new-project-form" class="new-project-form hidden">
+        <h3>Новый проект</h3>
+        <input id="project-name" type="text" placeholder="Название проекта…" />
+        <textarea id="project-goal" rows="2" placeholder="Цель проекта…"></textarea>
+        <input id="project-deadline" type="date" />
+        <div class="form-actions">
+          <button id="create-project-btn" class="btn-primary">Создать</button>
+          <button id="cancel-project-btn" class="btn-ghost">Отмена</button>
+        </div>
+      </div>
+    </div><!-- /view-projects -->
+
     <!-- ВИД: ГРАФ ЗНАНИЙ -->
     <div id="view-knowledge" class="view">
       <div class="view-header">
@@ -166,8 +252,37 @@
       <div class="view-header">
         <h2>🔬 Улучшение</h2>
         <div class="view-header-actions">
+          <button id="ouroboros-btn" class="btn-secondary" title="Запустить цикл Уроборос">🐍 Уроборос</button>
           <button id="run-cycle-btn" class="btn-primary">Запустить цикл</button>
         </div>
+      </div>
+
+      <!-- Карточки качества -->
+      <div id="quality-cards" class="quality-cards">
+        <div class="quality-card">
+          <div class="quality-label">Полнота</div>
+          <div class="quality-bar-wrap"><div id="q-completeness" class="quality-bar" style="width:0%"></div></div>
+          <div id="q-completeness-val" class="quality-val">—</div>
+        </div>
+        <div class="quality-card">
+          <div class="quality-label">Точность</div>
+          <div class="quality-bar-wrap"><div id="q-accuracy" class="quality-bar" style="width:0%"></div></div>
+          <div id="q-accuracy-val" class="quality-val">—</div>
+        </div>
+        <div class="quality-card">
+          <div class="quality-label">Полезность</div>
+          <div class="quality-bar-wrap"><div id="q-helpfulness" class="quality-bar" style="width:0%"></div></div>
+          <div id="q-helpfulness-val" class="quality-val">—</div>
+        </div>
+        <div class="quality-card">
+          <div class="quality-label">Общий балл</div>
+          <div class="quality-bar-wrap"><div id="q-overall" class="quality-bar quality-bar-main" style="width:0%"></div></div>
+          <div id="q-overall-val" class="quality-val">—</div>
+        </div>
+      </div>
+      <div id="weak-points-section" class="weak-points-section hidden">
+        <h4>Частые проблемы:</h4>
+        <div id="weak-points-list"></div>
       </div>
 
       <div class="improve-layout">
@@ -243,7 +358,7 @@
         </section>
         <button id="save-settings-btn" class="btn-primary">Сохранить настройки</button>
         <div class="settings-about">
-          <strong>ROSA OS v3.0.0</strong><br/>
+          <strong>ROSA OS v4.0.0</strong><br/>
           Мозг: Kimi K2.5 через OpenRouter<br/>
           Строитель: Claude Code<br/>
           Будущее: интеграция Perplexity Computer<br/>
