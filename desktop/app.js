@@ -1198,6 +1198,222 @@ function initChatTitle() {
   });
 }
 
+// ── INGEST: DRAG & DROP ───────────────────────────────────────────────────
+
+let ingestWs = null;
+const ingestJobs = {};
+
+function initDragDrop() {
+  const chatArea = $(".chat-main") || document.body;
+
+  chatArea.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const overlay = $("#dropOverlay");
+    if (overlay) overlay.style.display = "flex";
+  });
+
+  chatArea.addEventListener("dragleave", (e) => {
+    if (!e.relatedTarget || !chatArea.contains(e.relatedTarget)) {
+      const overlay = $("#dropOverlay");
+      if (overlay) overlay.style.display = "none";
+    }
+  });
+
+  chatArea.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const overlay = $("#dropOverlay");
+    if (overlay) overlay.style.display = "none";
+
+    const files = [...(e.dataTransfer?.files || [])];
+    const urls = e.dataTransfer?.getData("text/uri-list") || e.dataTransfer?.getData("text/plain") || "";
+
+    if (files.length) {
+      for (const file of files) {
+        await uploadFileForIngest(file);
+      }
+    } else if (urls.trim().startsWith("http")) {
+      await ingestUrl(urls.trim());
+    }
+  });
+
+  // File input button
+  const fileBtn = $("#ingestFileBtn");
+  const fileInput = $("#ingestFileInput");
+  if (fileBtn && fileInput) {
+    fileBtn.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", async () => {
+      for (const file of fileInput.files) {
+        await uploadFileForIngest(file);
+      }
+      fileInput.value = "";
+    });
+  }
+
+  connectIngestWs();
+}
+
+async function uploadFileForIngest(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  appendMessage("rosa", `📎 Загружаю **${escHtml(file.name)}** (${(file.size / 1024).toFixed(0)} KB)...`);
+
+  try {
+    const res = await fetch(`${state.serverUrl}/api/ingest/file`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || res.statusText);
+    }
+    const data = await res.json();
+    trackIngestJob(data.job_id, file.name);
+  } catch (e) {
+    appendMessage("rosa", `❌ Ошибка загрузки **${escHtml(file.name)}**: ${escHtml(e.message)}`);
+  }
+}
+
+async function ingestUrl(url) {
+  appendMessage("rosa", `🌐 Изучаю **${escHtml(url.slice(0, 80))}**...`);
+  try {
+    const data = await api("POST", "/api/ingest/url", { url });
+    trackIngestJob(data.job_id, url.slice(0, 60));
+  } catch (e) {
+    appendMessage("rosa", `❌ Ошибка: ${escHtml(e.message)}`);
+  }
+}
+
+async function ingestUrlFromInput() {
+  const el = $("#ingestUrlInput");
+  if (!el) return;
+  const url = el.value.trim();
+  if (!url) return;
+  el.value = "";
+  await ingestUrl(url);
+}
+
+function trackIngestJob(jobId, label) {
+  ingestJobs[jobId] = label;
+  updateIngestStatus(jobId, "queued", 0, label);
+}
+
+function updateIngestStatus(jobId, status, progress, label) {
+  const barId = `ingest-${jobId}`;
+  let bar = $(`#${barId}`);
+  if (!bar) {
+    const container = $("#ingestProgress");
+    if (!container) return;
+    bar = document.createElement("div");
+    bar.id = barId;
+    bar.className = "ingest-job";
+    container.appendChild(bar);
+  }
+
+  const icons = { queued: "⏳", processing: "🔵", done: "✅", failed: "❌", retrying: "🔄" };
+  const icon = icons[status] || "⏳";
+  const name = label || ingestJobs[jobId] || jobId;
+
+  bar.innerHTML = `
+    <span class="ingest-icon">${icon}</span>
+    <span class="ingest-name">${escHtml(String(name).slice(0, 50))}</span>
+    ${status === "processing" ? `<div class="ingest-bar"><div class="ingest-fill" style="width:${progress}%"></div></div>` : ""}
+    ${status === "done" ? `<span class="ingest-pct">100%</span>` : ""}
+    ${status === "failed" ? `<span class="ingest-err">Ошибка</span>` : ""}`;
+
+  if (status === "done") {
+    const sourceName = label || "данные";
+    const detail = typeof label === "string" ? label.slice(0, 60) : sourceName;
+    setTimeout(() => {
+      bar.remove();
+      appendMessage("rosa", `✅ Роза усвоила: **${escHtml(detail)}** и добавила в граф знаний`);
+    }, 2000);
+  }
+}
+
+function connectIngestWs() {
+  if (ingestWs) return;
+  try {
+    const wsUrl = state.serverUrl.replace(/^http/, "ws") + "/api/ingest/ws";
+    ingestWs = new WebSocket(wsUrl);
+
+    ingestWs.onmessage = (e) => {
+      try {
+        const job = JSON.parse(e.data);
+        if (!job.id || job.type === "ping") return;
+        const label = ingestJobs[job.id] || job.source?.slice(0, 60) || job.id;
+        updateIngestStatus(job.id, job.status, job.progress || 0, label);
+      } catch (_) {}
+    };
+
+    ingestWs.onclose = () => {
+      ingestWs = null;
+      setTimeout(connectIngestWs, 5000);
+    };
+  } catch (_) {}
+}
+
+// ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────
+
+async function subscribeToNotifications() {
+  const statusEl = $("#pushStatus");
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (statusEl) statusEl.textContent = "⚠️ Push не поддерживается в этом браузере";
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const vapidRes = await api("GET", "/api/notifications/vapid-key");
+    const publicKey = vapidRes.vapid_public_key;
+    if (!publicKey) throw new Error("VAPID ключ не настроен на сервере");
+
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+
+    await api("POST", "/api/notifications/subscribe", sub.toJSON());
+    if (statusEl) statusEl.textContent = "✅ Push-уведомления включены";
+  } catch (e) {
+    if (statusEl) statusEl.textContent = `❌ Ошибка: ${escHtml(e.message)}`;
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; ++i) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
+// ── TUNNEL / QR ───────────────────────────────────────────────────────────
+
+async function loadTunnelInfo() {
+  try {
+    const data = await api("GET", "/api/tunnel/url");
+    const urlEl = $("#tunnelUrl");
+    if (urlEl) urlEl.textContent = data.url || "Туннель не активен";
+
+    if (data.url) {
+      const qrData = await api("GET", "/api/tunnel/qr");
+      const qrEl = $("#tunnelQr");
+      if (qrEl && qrData.qr_base64) {
+        qrEl.innerHTML = `<img src="data:image/png;base64,${qrData.qr_base64}" alt="QR код" style="width:180px;height:180px">`;
+      }
+    }
+  } catch (e) {}
+}
+
+async function startTunnel() {
+  try {
+    await api("POST", "/api/tunnel/start");
+    await loadTunnelInfo();
+  } catch (e) { alert("Ошибка: " + e.message); }
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────
 
 function init() {
@@ -1206,6 +1422,7 @@ function init() {
   initHotkeys();
   initSidebarSearch();
   initChatTitle();
+  initDragDrop();
 
   // Nav items
   $$(".nav-item[data-view]").forEach((el) => {

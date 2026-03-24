@@ -41,11 +41,13 @@ from core.api.status import router as status_router
 from core.api.fs import router as fs_router
 from core.api.search import router as search_router
 from core.api.mac import router as mac_router
-from core.api.telegram import router as telegram_router
+from core.api.tunnel import router as tunnel_router
+from core.api.notifications import router as notifications_router
 from core.api.coding import router as coding_router
 from core.api.swarm import router as swarm_auto_router
 from core.api.economy import router as economy_router
 from core.api.planning import router as planning_router
+from core.api.ingest import router as ingest_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -96,6 +98,34 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Backup scheduler failed to start: %s", exc)
 
+    # Start ngrok tunnel (non-blocking, optional)
+    try:
+        from core.tunnel.ngrok_manager import get_tunnel_manager
+        import os
+        if os.getenv("NGROK_AUTO_START", "false").lower() == "true":
+            url = await get_tunnel_manager().start(settings.port)
+            if url:
+                logger.info("Public tunnel: %s", url)
+    except Exception as exc:
+        logger.debug("Tunnel start skipped: %s", exc)
+
+    # Start ingest job queue
+    try:
+        from core.ingest.universal_ingester import register_all_handlers
+        from core.ingest.job_queue import get_job_queue
+        register_all_handlers()
+        await get_job_queue().start()
+        logger.info("Ingest job queue started")
+    except Exception as exc:
+        logger.warning("Ingest queue failed to start: %s", exc)
+
+    # Initialize VAPID keys for push notifications (non-blocking)
+    try:
+        from core.notifications.web_push import get_or_create_vapid_keys
+        get_or_create_vapid_keys()
+    except Exception:
+        pass
+
     # Set initial status
     try:
         from core.status.tracker import set_status, RosaStatus
@@ -109,6 +139,13 @@ async def lifespan(app: FastAPI):
     try:
         from core.prediction.proactive import stop_scheduler
         stop_scheduler()
+    except Exception:
+        pass
+
+    # Stop ingest queue
+    try:
+        from core.ingest.job_queue import get_job_queue
+        await get_job_queue().stop()
     except Exception:
         pass
 
@@ -157,11 +194,13 @@ def create_app() -> FastAPI:
     app.include_router(fs_router)
     app.include_router(search_router)
     app.include_router(mac_router)
-    app.include_router(telegram_router)
+    app.include_router(tunnel_router)
+    app.include_router(notifications_router)
     app.include_router(coding_router)
     app.include_router(swarm_auto_router)
     app.include_router(economy_router)
     app.include_router(planning_router)
+    app.include_router(ingest_router)
 
     # Health check
     @app.get("/health", tags=["system"])
@@ -176,6 +215,24 @@ def create_app() -> FastAPI:
         @app.get("/", include_in_schema=False)
         async def serve_index() -> FileResponse:
             return FileResponse(str(desktop_path / "index.html"))
+
+        # PWA required files served at root
+        @app.get("/manifest.json", include_in_schema=False)
+        async def serve_manifest() -> FileResponse:
+            return FileResponse(str(desktop_path / "manifest.json"), media_type="application/manifest+json")
+
+        @app.get("/sw.js", include_in_schema=False)
+        async def serve_sw() -> FileResponse:
+            return FileResponse(str(desktop_path / "sw.js"), media_type="application/javascript",
+                                headers={"Service-Worker-Allowed": "/"})
+
+        @app.get("/icons/{filename}", include_in_schema=False)
+        async def serve_icon(filename: str) -> FileResponse:
+            icon_path = desktop_path / "icons" / filename
+            if icon_path.exists():
+                return FileResponse(str(icon_path))
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404)
 
     return app
 
