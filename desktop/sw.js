@@ -3,7 +3,7 @@
    Caches static assets, handles offline, background sync
    ============================================================ */
 
-const CACHE_VERSION = "rosa-v5.0";
+const CACHE_VERSION = "rosa-v5.1";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 

@@ -420,8 +420,8 @@ function hideTyping() {
 
 function setSendState(sending) {
   state.sending = sending;
-  const btn = $("#sendBtn");
-  const ta = $("#chatInput");
+  const btn = $("#btnSend");
+  const ta = $("#messageInput");
   if (btn) btn.disabled = sending;
   if (ta) ta.disabled = sending;
 }
@@ -440,7 +440,7 @@ function likeMessage(id, val) {
 // ── CHAT: SEND ────────────────────────────────────────────────────────────
 
 async function sendMessage() {
-  const ta = $("#chatInput");
+  const ta = $("#messageInput");
   if (!ta) return;
   const msg = ta.value.trim();
   if (!msg || state.sending) return;
@@ -475,7 +475,7 @@ async function sendMessage() {
 }
 
 function sendSuggestion(text) {
-  const ta = $("#chatInput");
+  const ta = $("#messageInput");
   if (ta) {
     ta.value = text;
     sendMessage();
@@ -490,15 +490,25 @@ function autoResize(ta) {
 }
 
 function initChatInput() {
-  const ta = $("#chatInput");
+  const ta = $("#messageInput");
+  const btn = $("#btnSend");
   if (!ta) return;
-  ta.addEventListener("input", () => autoResize(ta));
+
+  // Enable/disable send button as user types
+  window._rosaInputHandler = (el) => {
+    autoResize(el);
+    if (btn) btn.disabled = !el.value.trim() || state.sending;
+  };
+
+  ta.addEventListener("input", () => window._rosaInputHandler(ta));
   ta.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   });
+  // initial state
+  if (btn) btn.disabled = true;
 }
 
 // ── STATUS WS ─────────────────────────────────────────────────────────────
@@ -533,7 +543,7 @@ async function runSwarm() {
   if (!task || state.swarmRunning) return;
 
   state.swarmRunning = true;
-  const btn = $("#swarmRunBtn");
+  const btn = $("#btnRunSwarm");
   if (btn) btn.disabled = true;
 
   const resultDiv = $("#swarmSynthesis");
@@ -577,7 +587,7 @@ async function analyzeComplexity() {
   if (!ta || !ta.value.trim()) return;
   try {
     const data = await api("POST", "/api/swarm/complexity", { task: ta.value.trim() });
-    const badge = $("#complexityBadge");
+    const badge = $("#swarmStatus");
     if (badge) {
       badge.textContent = `${data.complexity} · ${data.agent_count} агентов`;
       badge.style.display = "inline-block";
@@ -631,7 +641,7 @@ async function searchKnowledge() {
 async function runHyperSearch() {
   const q = $("#knowledgeSearch")?.value?.trim();
   if (!q) return;
-  const btn = $("#hyperSearchBtn");
+  const btn = $("#btnHyperSearch");
   if (btn) btn.disabled = true;
   const results = $("#knowledgeResults");
   if (results) results.innerHTML = '<div class="thinking">HyperSearch запущен...</div>';
@@ -665,7 +675,7 @@ async function loadProjects() {
 }
 
 function renderProjectList() {
-  const list = $("#projectList");
+  const list = $("#projectsList");
   if (!list) return;
   list.innerHTML = state.projects
     .map((p) => `<div class="project-item ${p.id === state.currentProjectId ? 'active' : ''}"
@@ -729,8 +739,8 @@ function closeNewProjectModal() {
 }
 
 async function createProject() {
-  const title = $("#newProjectTitle")?.value?.trim();
-  const desc = $("#newProjectDesc")?.value?.trim();
+  const title = $("#newProjectName")?.value?.trim();
+  const desc = $("#newProjectGoal")?.value?.trim();
   if (!title) return;
   try {
     await api("POST", "/api/tasks", { title, description: desc || "", status: "pending" });
@@ -776,7 +786,7 @@ function renderQualityCards(data) {
 }
 
 function renderWeakPoints(points) {
-  const el = $("#weakPoints");
+  const el = $("#weakPointsList");
   if (!el) return;
   if (!points.length) {
     el.innerHTML = "<span class='text-muted'>Нет данных</span>";
@@ -790,7 +800,7 @@ function renderWeakPoints(points) {
 async function loadProposals() {
   try {
     const data = await api("GET", "/api/self-improve/proposals");
-    const list = $("#proposalList");
+    const list = $("#proposalsList");
     if (!list) return;
     const proposals = data.proposals || [];
     if (!proposals.length) {
@@ -820,7 +830,7 @@ async function applyProposal(id) {
 }
 
 async function runSelfImprove() {
-  const btn = $("#selfImproveBtn");
+  const btn = $("#btnOuroboros");
   if (btn) { btn.disabled = true; btn.textContent = "Анализирую..."; }
   try {
     await api("POST", "/api/self-improve/run");
@@ -1073,7 +1083,7 @@ function initHotkeys() {
     }
     if (e.ctrlKey && e.key === "k") {
       e.preventDefault();
-      const searchEl = $("#sidebarSearch");
+      const searchEl = $("#chatSearch");
       if (searchEl) searchEl.focus();
     }
     if (e.ctrlKey && e.key === "/") {
@@ -1094,7 +1104,7 @@ function initHotkeys() {
 // ── SIDEBAR SEARCH ────────────────────────────────────────────────────────
 
 function initSidebarSearch() {
-  const input = $("#sidebarSearch");
+  const input = $("#chatSearch");
   if (!input) return;
   input.addEventListener("input", () => {
     const q = input.value.toLowerCase();
@@ -1125,8 +1135,8 @@ function toggleTool(tool) {
 // ── TOKEN COUNTER ─────────────────────────────────────────────────────────
 
 function updateTokenCount() {
-  const ta = $("#chatInput");
-  const counter = $("#tokenCount");
+  const ta = $("#messageInput");
+  const counter = $("#tokenCounter");
   if (!ta || !counter) return;
   const chars = ta.value.length;
   const approx = Math.ceil(chars / 4);
@@ -1441,7 +1451,7 @@ function init() {
   loadChatList();
 
   // Chat input token counter
-  const ta = $("#chatInput");
+  const ta = $("#messageInput");
   if (ta) ta.addEventListener("input", updateTokenCount);
 
   // Show chat view by default
@@ -1459,6 +1469,47 @@ function init() {
   // Swarm task textarea
   const swarmTa = $("#swarmTask");
   if (swarmTa) swarmTa.addEventListener("blur", analyzeComplexity);
+
+  // ── Wire all buttons ────────────────────────────────────────────────────
+  const wire = (id, fn) => { const el = $(id); if (el) el.addEventListener("click", fn); };
+
+  // Chat toolbar
+  wire("#btnNewChat",       newChat);
+  wire("#btnStop",          () => { if (state.ws) state.ws.close(); setSendState(false); });
+  wire("#btnSearch",        () => sendSuggestion("Найди в интернете: "));
+  wire("#btnMission",       () => sendSuggestion("Составь план задачи: "));
+  wire("#btnExecuteCode",   () => sendSuggestion("Напиши и выполни Python код: "));
+
+  // Swarm view
+  wire("#btnRunSwarm",      runSwarm);
+  wire("#btnRunAutoSwarm",  () => {
+    const t = $("#swarmTask"); if (t && t.value.trim()) runSwarm();
+    else appendMessage("rosa", "Введите задачу для роя агентов");
+  });
+
+  // Knowledge view
+  wire("#btnKnowledgeSearch", searchKnowledge);
+  wire("#btnHyperSearch",     runHyperSearch);
+
+  // Projects view
+  wire("#btnNewProject",    showNewProjectModal);
+  wire("#btnCreateProject", createProject);
+  wire("#btnCancelProject", closeNewProjectModal);
+  wire("#btnAddTask",       createProject);
+
+  // Improve view
+  wire("#btnOuroboros",     runSelfImprove);
+  wire("#btnLoadHistory",   () => api("GET","/api/status/history?limit=50").then(d=>renderStatusHistory(d)).catch(()=>{}));
+  wire("#btnLoadProposals", loadProposals);
+
+  // Settings view
+  wire("#btnGithubIngest",  ingestGitHub);
+  wire("#btnTiktokAnalyze", analyzeTikTok);
+  wire("#btnTelegramImport",importTelegram);
+  wire("#btnEconomy",       () => api("GET","/api/economy/env").then(d=>{const el=$("#economyStats");if(el)el.textContent=JSON.stringify(d,null,2);}).catch(()=>{}));
+  wire("#btnMacStatus",     () => api("GET","/api/mac/status").then(d=>{const el=$("#systemOutput");if(el)el.textContent=JSON.stringify(d,null,2);}).catch(()=>{}));
+  wire("#btnBackup",        createBackup);
+  wire("#btnGitLog",        () => api("GET","/api/coding/git/log?limit=10").then(d=>{const el=$("#systemOutput");if(el)el.textContent=(d.commits||[]).map(c=>c.hash?.slice(0,7)+" "+c.message).join("\n");}).catch(()=>{}));
 
   console.log("🌹 ROSA Desktop v5.0 — SuperJarvis initialized");
 }

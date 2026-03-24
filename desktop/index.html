@@ -30,7 +30,7 @@
           <span class="logo-icon">🌹</span>
           <span class="logo-text">ROSA OS <span class="version-badge">v5</span></span>
         </div>
-        <button class="btn-new-chat" id="btnNewChat">
+        <button class="btn-new-chat" id="btnNewChat" onclick="newChat()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Новый чат
         </button>
@@ -102,10 +102,10 @@
             <h1>ROSA OS v5</h1>
             <p>Живой AI-ассистент. Всегда онлайн, помнит всё.</p>
             <div class="welcome-suggestions">
-              <button class="suggestion-btn" onclick="app.sendSuggestion('Что ты умеешь делать?')">Что ты умеешь?</button>
-              <button class="suggestion-btn" onclick="app.sendSuggestion('Покажи статус системы')">Статус системы</button>
-              <button class="suggestion-btn" onclick="app.sendSuggestion('Запусти рой агентов для анализа трендов ИИ')">Запустить рой агентов</button>
-              <button class="suggestion-btn" onclick="app.sendSuggestion('Составь план задачи: найти новости про Python')">Составить план</button>
+              <button class="suggestion-btn" onclick="sendSuggestion('Что ты умеешь делать?')">Что ты умеешь?</button>
+              <button class="suggestion-btn" onclick="sendSuggestion('Покажи статус системы')">Статус системы</button>
+              <button class="suggestion-btn" onclick="sendSuggestion('Запусти рой агентов для анализа трендов ИИ')">Запустить рой агентов</button>
+              <button class="suggestion-btn" onclick="sendSuggestion('Составь план задачи: найти новости про Python')">Составить план</button>
             </div>
           </div>
           <div id="messagesList"></div>
@@ -135,8 +135,8 @@
             <span class="token-counter" id="tokenCounter">0 симв.</span>
           </div>
           <div class="input-wrapper">
-            <textarea id="messageInput" placeholder="Сообщение Розе... (Ctrl+Enter отправить)" rows="1"></textarea>
-            <button class="btn-send" id="btnSend" disabled>
+            <textarea id="messageInput" placeholder="Сообщение Розе... (Ctrl+Enter отправить)" rows="1" oninput="window._rosaInputHandler && window._rosaInputHandler(this)"></textarea>
+            <button class="btn-send" id="btnSend" onclick="sendMessage()" disabled>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
           </div>
@@ -155,7 +155,7 @@
             <label>Задача для роя:</label>
             <textarea id="swarmTask" rows="3" placeholder="Исследуй тренды ИИ в 2025 году и составь отчёт..."></textarea>
             <div class="swarm-controls">
-              <button class="btn-primary" id="btnRunSwarm">▶ Запустить рой</button>
+              <button class="btn-primary" id="btnRunSwarm" onclick="runSwarm()">▶ Запустить рой</button>
               <button class="btn-secondary" id="btnRunAutoSwarm">⚡ Авто-рой</button>
             </div>
           </div>
@@ -190,8 +190,8 @@
         <div class="knowledge-body">
           <div class="knowledge-search-bar">
             <input type="text" id="knowledgeSearch" placeholder="Поиск по памяти Розы..." />
-            <button class="btn-primary" id="btnKnowledgeSearch">Искать</button>
-            <button class="btn-secondary" id="btnHyperSearch">🔍 HyperSearch</button>
+            <button class="btn-primary" id="btnKnowledgeSearch" onclick="searchKnowledge()">Искать</button>
+            <button class="btn-secondary" id="btnHyperSearch" onclick="runHyperSearch()">🔍 HyperSearch</button>
           </div>
           <div class="knowledge-stats" id="knowledgeStats">
             <div class="stat-card"><span class="stat-num" id="statNodes">—</span><span class="stat-label">Узлов</span></div>
@@ -206,7 +206,7 @@
       <div class="view" id="view-projects">
         <div class="view-header">
           <h2>📁 Проекты</h2>
-          <button class="btn-primary" id="btnNewProject">+ Новый проект</button>
+          <button class="btn-primary" id="btnNewProject" onclick="showNewProjectModal()">+ Новый проект</button>
         </div>
         <div class="projects-layout">
           <div class="projects-list" id="projectsList"></div>
@@ -227,8 +227,8 @@
             <textarea id="newProjectGoal" rows="2" placeholder="Цель..."></textarea>
             <input type="date" id="newProjectDeadline" />
             <div class="modal-actions">
-              <button class="btn-primary" id="btnCreateProject">Создать</button>
-              <button class="btn-ghost" id="btnCancelProject">Отмена</button>
+              <button class="btn-primary" id="btnCreateProject" onclick="createProject()">Создать</button>
+              <button class="btn-ghost" id="btnCancelProject" onclick="closeNewProjectModal()">Отмена</button>
             </div>
           </div>
         </div>
@@ -238,7 +238,7 @@
       <div class="view" id="view-improve">
         <div class="view-header">
           <h2>✨ Самосовершенствование</h2>
-          <button class="btn-danger" id="btnOuroboros">🐍 Уроборос</button>
+          <button class="btn-danger" id="btnOuroboros" onclick="runSelfImprove()">🐍 Уроборос</button>
         </div>
         <div class="improve-body">
           <div class="quality-cards" id="qualityCards">
@@ -254,12 +254,12 @@
           <div class="status-history-section">
             <h3>История статусов</h3>
             <div id="statusHistory" class="status-history-list"></div>
-            <button class="btn-secondary" id="btnLoadHistory">Загрузить</button>
+            <button class="btn-secondary" id="btnLoadHistory" onclick="loadImproveView()">Загрузить</button>
           </div>
           <div class="improve-proposals">
             <h3>Предложения по улучшению</h3>
             <div id="proposalsList"></div>
-            <button class="btn-secondary" id="btnLoadProposals">Загрузить предложения</button>
+            <button class="btn-secondary" id="btnLoadProposals" onclick="loadProposals()">Загрузить предложения</button>
           </div>
         </div>
       </div>
@@ -277,19 +277,19 @@
             <div class="integration-row">
               <span class="integration-label">🐙 GitHub</span>
               <input type="text" id="githubUrl" placeholder="https://github.com/owner/repo" class="integration-input" />
-              <button class="btn-secondary" id="btnGithubIngest">Загрузить</button>
+              <button class="btn-secondary" id="btnGithubIngest" onclick="ingestGitHub()">Загрузить</button>
               <span class="integration-status" id="githubStatus"></span>
             </div>
             <div class="integration-row">
               <span class="integration-label">🎵 TikTok</span>
               <input type="text" id="tiktokUrl" placeholder="URL видео TikTok" class="integration-input" />
-              <button class="btn-secondary" id="btnTiktokAnalyze">Анализировать</button>
+              <button class="btn-secondary" id="btnTiktokAnalyze" onclick="analyzeTikTok()">Анализировать</button>
               <span class="integration-status" id="tiktokStatus"></span>
             </div>
             <div class="integration-row">
               <span class="integration-label">✈️ Telegram</span>
               <input type="text" id="telegramChatId" placeholder="@username" class="integration-input" />
-              <button class="btn-secondary" id="btnTelegramImport">Импортировать</button>
+              <button class="btn-secondary" id="btnTelegramImport" onclick="importTelegram()">Импортировать</button>
               <span class="integration-status" id="telegramStatus"></span>
             </div>
           </div>
@@ -305,8 +305,8 @@
           <div class="settings-section">
             <h3>Система</h3>
             <div class="system-actions">
-              <button class="btn-secondary" id="btnMacStatus">💻 Статус Mac</button>
-              <button class="btn-secondary" id="btnBackup">💾 Бэкап</button>
+              <button class="btn-secondary" id="btnMacStatus" onclick="sendSuggestion('Покажи статус системы Mac')">💻 Статус Mac</button>
+              <button class="btn-secondary" id="btnBackup" onclick="createBackup()">💾 Бэкап</button>
               <button class="btn-secondary" id="btnGitLog">📋 Git лог</button>
             </div>
             <div id="systemOutput" class="system-output"></div>
@@ -344,5 +344,17 @@
       });
     }
   </script>
+
+  <!-- Mission Plan Modal -->
+  <div class="modal-overlay" id="missionModal" style="display:none"></div>
+
+  <!-- Drag & Drop Overlay -->
+  <div id="dropOverlay" style="display:none;position:fixed;inset:0;background:rgba(16,163,127,.18);border:3px dashed #10a37f;z-index:9999;align-items:center;justify-content:center;font-size:2rem;color:#10a37f;pointer-events:none;">
+    📎 Отпустите файл для загрузки в ROSA
+  </div>
+
+  <!-- Ingest progress bar (bottom of page) -->
+  <div id="ingestProgress" style="position:fixed;bottom:60px;right:16px;width:280px;z-index:999;display:flex;flex-direction:column;gap:6px;pointer-events:none;"></div>
+
 </body>
 </html>
