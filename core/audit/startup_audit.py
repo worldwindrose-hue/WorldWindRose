@@ -1,8 +1,8 @@
 """ROSA OS — Startup Audit. Checks system health at boot, saves report."""
 
 from __future__ import annotations
-import json, logging, shutil, time
-from dataclasses import dataclass, asdict, field
+import inspect, json, logging, shutil, time
+from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -29,8 +29,7 @@ class AuditReport:
     failed: int
 
     def to_dict(self) -> dict:
-        d = asdict(self)
-        return d
+        return asdict(self)
 
     @classmethod
     def from_dict(cls, d: dict) -> "AuditReport":
@@ -42,17 +41,15 @@ async def run_startup_audit() -> AuditReport:
     checks: list[AuditCheck] = []
 
     async def check(name: str, fn):
+        """Run a sync or async check function, capture result safely."""
         t0 = time.monotonic()
         try:
-            msg, status = await fn() if hasattr(fn, "__await__") else (lambda: fn())()
-            if callable(fn):
-                import asyncio
-                if asyncio.iscoroutinefunction(fn):
-                    msg, status = await fn()
-                else:
-                    msg, status = fn()
+            if inspect.iscoroutinefunction(fn):
+                msg, status = await fn()
+            else:
+                msg, status = fn()
         except Exception as exc:
-            msg, status = str(exc)[:100], "fail"
+            msg, status = str(exc)[:120], "fail"
         dur = (time.monotonic() - t0) * 1000
         checks.append(AuditCheck(name=name, status=status, message=msg, duration_ms=round(dur, 1)))
 
@@ -65,7 +62,7 @@ async def run_startup_audit() -> AuditReport:
                 return "OpenRouter key present", "pass"
             return "OpenRouter key missing — set OPENROUTER_API_KEY", "warn"
         except Exception as e:
-            return str(e), "fail"
+            return str(e)[:100], "fail"
     await check("API Key", _check_api_key)
 
     # 2. Memory dir
@@ -92,12 +89,17 @@ async def run_startup_audit() -> AuditReport:
         return f"Disk critical: {free_gb:.1f} GB", "fail"
     await check("Disk Space", _check_disk)
 
-    # 4. SQLite DB
+    # 4. SQLite DB — lightweight probe, no full init required
     async def _check_db():
         try:
-            from core.memory.store import get_store
-            store = await get_store()
+            import aiosqlite
+            db_path = Path("memory/rosa.db")
+            db_path.parent.mkdir(exist_ok=True)
+            async with aiosqlite.connect(str(db_path)) as db:
+                await db.execute("SELECT 1")
             return "SQLite DB accessible", "pass"
+        except ImportError:
+            return "aiosqlite not installed", "fail"
         except Exception as e:
             return f"DB error: {e}", "fail"
     await check("SQLite DB", _check_db)
@@ -112,21 +114,23 @@ async def run_startup_audit() -> AuditReport:
             return f"Config error: {e}", "fail"
     await check("Config", _check_config)
 
-    # 6. ChromaDB (optional)
+    # 6. ChromaDB (optional — warn if missing, not fail)
     def _check_chromadb():
         try:
-            import chromadb
+            import chromadb  # noqa: F401
             return "ChromaDB available", "pass"
         except ImportError:
-            return "ChromaDB not installed (using SQLite fallback)", "warn"
+            return "ChromaDB not installed (SQLite fallback active)", "warn"
+        except Exception as e:
+            return f"ChromaDB error: {e}", "warn"
     await check("ChromaDB", _check_chromadb)
 
     # Score
     passed = sum(1 for c in checks if c.status == "pass")
-    warned = sum(1 for c in checks if c.status == "warn")
-    failed = sum(1 for c in checks if c.status == "fail")
-    total = len(checks)
-    score = round((passed * 1.0 + warned * 0.5) / max(total, 1) * 100, 1)
+    warned  = sum(1 for c in checks if c.status == "warn")
+    failed  = sum(1 for c in checks if c.status == "fail")
+    total   = len(checks)
+    score   = round((passed * 1.0 + warned * 0.5) / max(total, 1) * 100, 1)
 
     report = AuditReport(
         timestamp=datetime.now(timezone.utc).isoformat(),
