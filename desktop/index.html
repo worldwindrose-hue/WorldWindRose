@@ -1,388 +1,327 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="dark">
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ROSA OS</title>
+  <title>ROSA OS v5</title>
   <link rel="stylesheet" href="/app/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body>
+  <div class="app-layout">
 
-<div class="layout">
-
-  <!-- ── БОКОВАЯ ПАНЕЛЬ ──────────────────────────────────────────────── -->
-  <aside class="sidebar">
-    <div class="sidebar-top">
-      <div class="sidebar-logo">🌹 <span>ROSA OS</span></div>
-      <button id="new-chat-btn" class="btn-new-chat" title="Новый чат (Ctrl+N)">
-        <span class="icon">✏️</span> Новый чат
-      </button>
-      <div class="search-wrap">
-        <input id="session-search" type="text" placeholder="Поиск по чатам…" autocomplete="off" />
-      </div>
-    </div>
-
-    <!-- Папки + Список чатов -->
-    <div class="sidebar-sessions" id="sidebar-sessions">
-      <!-- рендерится через JS -->
-    </div>
-
-    <!-- Нижняя навигация -->
-    <div class="sidebar-bottom">
-      <button class="bottom-nav-btn active" data-view="chat" title="Чат">
-        💬 <span>Чат</span>
-      </button>
-      <button class="bottom-nav-btn" data-view="swarm" title="Рой агентов">
-        🐝 <span>Рой</span>
-      </button>
-      <button class="bottom-nav-btn" data-view="knowledge" title="Граф знаний">
-        🧠 <span>Знания</span>
-      </button>
-      <button class="bottom-nav-btn" data-view="projects" title="Проекты">
-        📁 <span>Проекты</span>
-      </button>
-      <button class="bottom-nav-btn" data-view="selfimprove" title="Улучшение">
-        🔬 <span>Улучшение</span>
-      </button>
-      <button class="bottom-nav-btn" data-view="settings" title="Настройки">
-        ⚙️ <span>Настройки</span>
-      </button>
-      <div class="status-pill">
-        <span id="status-dot" class="dot disconnected"></span>
-        <span id="status-text">…</span>
-      </div>
-    </div>
-  </aside>
-
-  <!-- ── РАБОЧАЯ ОБЛАСТЬ ────────────────────────────────────────────── -->
-  <main class="workspace">
-
-    <!-- ВИД: ЧАТ -->
-    <div id="view-chat" class="view active">
-      <div class="chat-header">
-        <div class="chat-title-wrap">
-          <span id="chat-title" class="chat-title" contenteditable="false" spellcheck="false">Новый чат</span>
-          <button id="rename-btn" class="icon-btn-sm" title="Переименовать">✏️</button>
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-logo">
+          <span class="logo-icon">🌹</span>
+          <span class="logo-text">ROSA OS <span class="version-badge">v5</span></span>
         </div>
-        <div class="chat-meta">
-          <span id="model-badge" class="badge badge-model">авто</span>
-          <span id="mode-badge" class="badge badge-mode">kimi</span>
+        <button class="btn-new-chat" id="btnNewChat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Новый чат
+        </button>
+      </div>
+
+      <div class="sidebar-search">
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="chatSearch" placeholder="Поиск чатов..." />
+      </div>
+
+      <div class="chat-list" id="chatList"></div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-view="chat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Чат
+        </a>
+        <a href="#" class="nav-item" data-view="swarm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
+          Рой агентов
+        </a>
+        <a href="#" class="nav-item" data-view="knowledge">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          Знания
+        </a>
+        <a href="#" class="nav-item" data-view="projects">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Проекты
+        </a>
+        <a href="#" class="nav-item" data-view="improve">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          Улучшение
+        </a>
+        <a href="#" class="nav-item" data-view="settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Настройки
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar">👤</div>
+          <span class="user-name">Владелец</span>
         </div>
       </div>
+    </aside>
 
-      <div id="messages" class="messages">
-        <div class="welcome-screen">
-          <div class="welcome-logo">🌹</div>
-          <h2>ROSA OS</h2>
-          <p>Гибридный ИИ-ассистент на базе Kimi K2.5</p>
-          <div class="welcome-hints">
-            <div class="hint-chip">📎 Прикрепить файлы</div>
-            <div class="hint-chip">🌐 Парсить URL</div>
-            <div class="hint-chip">🎤 Голосовой ввод</div>
-            <div class="hint-chip">⚡ Live-режим</div>
+    <!-- MAIN AREA -->
+    <main class="main-area">
+
+      <!-- VIEW: CHAT -->
+      <div class="view active" id="view-chat">
+        <header class="chat-header">
+          <button class="sidebar-toggle" id="sidebarToggle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <span class="chat-title" id="chatTitle" contenteditable="true">Новый чат</span>
+          <div class="chat-header-right">
+            <span class="model-badge" id="modelBadge">🌙 Kimi K2.5</span>
+            <button class="btn-icon" id="btnStop" style="display:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="messages-container" id="messagesContainer">
+          <div class="welcome-screen" id="welcomeScreen">
+            <div class="welcome-logo">🌹</div>
+            <h1>ROSA OS v5</h1>
+            <p>Живой AI-ассистент. Всегда онлайн, помнит всё.</p>
+            <div class="welcome-suggestions">
+              <button class="suggestion-btn" onclick="app.sendSuggestion('Что ты умеешь делать?')">Что ты умеешь?</button>
+              <button class="suggestion-btn" onclick="app.sendSuggestion('Покажи статус системы')">Статус системы</button>
+              <button class="suggestion-btn" onclick="app.sendSuggestion('Запусти рой агентов для анализа трендов ИИ')">Запустить рой агентов</button>
+              <button class="suggestion-btn" onclick="app.sendSuggestion('Составь план задачи: найти новости про Python')">Составить план</button>
+            </div>
+          </div>
+          <div id="messagesList"></div>
+          <div class="typing-indicator" id="typingIndicator" style="display:none">
+            <div class="typing-avatar">🌹</div>
+            <div class="typing-dots"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+
+        <!-- STATUS BAR -->
+        <div class="status-bar" id="statusBar">
+          <div class="status-indicator">
+            <span class="status-dot green" id="statusDot"></span>
+            <span class="status-text" id="statusText">🌹 Роза онлайн</span>
+          </div>
+          <div class="status-agents" id="statusAgents" style="display:none">
+            <span id="agentCount">0</span> агентов
+          </div>
+        </div>
+
+        <!-- INPUT -->
+        <div class="input-area">
+          <div class="input-toolbar">
+            <button class="input-tool-btn" id="btnSearch" title="HyperSearch (Ctrl+Shift+S)">🔍 Поиск</button>
+            <button class="input-tool-btn" id="btnMission" title="Создать миссию">🎯 Миссия</button>
+            <button class="input-tool-btn" id="btnExecuteCode" title="Выполнить код">⚡ Код</button>
+            <span class="token-counter" id="tokenCounter">0 симв.</span>
+          </div>
+          <div class="input-wrapper">
+            <textarea id="messageInput" placeholder="Сообщение Розе... (Ctrl+Enter отправить)" rows="1"></textarea>
+            <button class="btn-send" id="btnSend" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+          <div class="input-hint">Ctrl+Enter — отправить · Esc — стоп · Ctrl+/ — горячие клавиши</div>
+        </div>
+      </div>
+
+      <!-- VIEW: SWARM -->
+      <div class="view" id="view-swarm">
+        <div class="view-header">
+          <h2>🤖 Рой агентов</h2>
+          <p>Rosa автоматически определяет количество и тип агентов</p>
+        </div>
+        <div class="swarm-body">
+          <div class="swarm-input-card">
+            <label>Задача для роя:</label>
+            <textarea id="swarmTask" rows="3" placeholder="Исследуй тренды ИИ в 2025 году и составь отчёт..."></textarea>
+            <div class="swarm-controls">
+              <button class="btn-primary" id="btnRunSwarm">▶ Запустить рой</button>
+              <button class="btn-secondary" id="btnRunAutoSwarm">⚡ Авто-рой</button>
+            </div>
+          </div>
+          <div id="swarmStatus" class="swarm-status" style="display:none">
+            <div id="swarmAgentList" class="swarm-agent-list"></div>
+          </div>
+          <div id="swarmSynthesis" class="swarm-synthesis" style="display:none">
+            <h3>Синтез результатов:</h3>
+            <div id="swarmSynthesisText"></div>
+          </div>
+          <div class="content-pipeline-card">
+            <h3>📝 Контент-пайплайн</h3>
+            <input type="text" id="contentTopic" placeholder="Тема..." />
+            <div class="content-controls">
+              <select id="contentType">
+                <option value="blog_post">Статья в блог</option>
+                <option value="social_post">Пост соцсети</option>
+                <option value="summary">Пересказ</option>
+                <option value="script">Сценарий</option>
+                <option value="email">Email</option>
+              </select>
+              <button class="btn-secondary" id="btnGenerateContent">Создать</button>
+            </div>
+            <div id="contentResult" style="display:none"></div>
           </div>
         </div>
       </div>
 
-      <!-- Панель ввода -->
-      <div class="input-area">
-        <!-- Чипы файлов -->
-        <div id="file-chips" class="file-chips hidden"></div>
-        <!-- Строка URL -->
-        <div id="url-row" class="url-row hidden">
-          <input id="url-input" type="url" placeholder="https://…" autocomplete="off" />
-          <button id="url-fetch-btn" class="btn-fetch">Загрузить</button>
-          <button id="url-close-btn" class="icon-btn-sm">✕</button>
-        </div>
-        <div class="input-row">
-          <div class="input-tools">
-            <button id="attach-btn" class="tool-btn" title="Прикрепить файл (Ctrl+U)">📎</button>
-            <button id="voice-btn"  class="tool-btn" title="Голосовой ввод (Ctrl+M)">🎤</button>
-            <button id="url-btn"    class="tool-btn" title="Парсить URL (Ctrl+L)">🌐</button>
-            <button id="live-btn"   class="tool-btn" title="Live-режим (Ctrl+Shift+L)">⚡</button>
+      <!-- VIEW: KNOWLEDGE -->
+      <div class="view" id="view-knowledge">
+        <div class="view-header"><h2>🧠 База знаний</h2></div>
+        <div class="knowledge-body">
+          <div class="knowledge-search-bar">
+            <input type="text" id="knowledgeSearch" placeholder="Поиск по памяти Розы..." />
+            <button class="btn-primary" id="btnKnowledgeSearch">Искать</button>
+            <button class="btn-secondary" id="btnHyperSearch">🔍 HyperSearch</button>
           </div>
-          <textarea
-            id="chat-input"
-            placeholder="Сообщение Розе… (Enter — отправить, Shift+Enter — новая строка)"
-            rows="1"
-            autofocus
-          ></textarea>
-          <div class="mode-wrap">
-            <select id="chat-mode" title="Режим маршрутизации">
-              <option value="">Авто</option>
-              <option value="cloud">Облако</option>
-              <option value="local">Локально</option>
-            </select>
-            <button id="send-btn" class="send-btn" title="Отправить (Enter)">↑</button>
+          <div class="knowledge-stats" id="knowledgeStats">
+            <div class="stat-card"><span class="stat-num" id="statNodes">—</span><span class="stat-label">Узлов</span></div>
+            <div class="stat-card"><span class="stat-num" id="statCacheHits">—</span><span class="stat-label">Кэш хиты</span></div>
+          </div>
+          <div id="knowledgeResults" class="knowledge-results"></div>
+          <div id="recentFacts" class="facts-list"><p class="placeholder">Загрузка...</p></div>
+        </div>
+      </div>
+
+      <!-- VIEW: PROJECTS -->
+      <div class="view" id="view-projects">
+        <div class="view-header">
+          <h2>📁 Проекты</h2>
+          <button class="btn-primary" id="btnNewProject">+ Новый проект</button>
+        </div>
+        <div class="projects-layout">
+          <div class="projects-list" id="projectsList"></div>
+          <div class="project-detail" id="projectDetail" style="display:none">
+            <h3 id="projectDetailName"></h3>
+            <div class="progress-bar"><div class="progress-fill" id="projectProgressFill"></div></div>
+            <div id="projectTasks" class="task-list"></div>
+            <div class="add-task-form">
+              <input type="text" id="newTaskInput" placeholder="Добавить задачу..." />
+              <button class="btn-secondary" id="btnAddTask">Добавить</button>
+            </div>
+          </div>
+        </div>
+        <div class="new-project-modal" id="newProjectModal" style="display:none">
+          <div class="modal-card">
+            <h3>Новый проект</h3>
+            <input type="text" id="newProjectName" placeholder="Название" />
+            <textarea id="newProjectGoal" rows="2" placeholder="Цель..."></textarea>
+            <input type="date" id="newProjectDeadline" />
+            <div class="modal-actions">
+              <button class="btn-primary" id="btnCreateProject">Создать</button>
+              <button class="btn-ghost" id="btnCancelProject">Отмена</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Скрытый file input -->
-      <input type="file" id="file-input" multiple accept="*/*" style="display:none" />
-    </div><!-- /view-chat -->
-
-    <!-- ВИД: РОЙ АГЕНТОВ -->
-    <div id="view-swarm" class="view">
-      <div class="view-header">
-        <h2>🐝 Рой агентов</h2>
-        <div class="view-header-actions">
-          <button id="swarm-run-btn" class="btn-primary">▶ Запустить рой</button>
+      <!-- VIEW: IMPROVE -->
+      <div class="view" id="view-improve">
+        <div class="view-header">
+          <h2>✨ Самосовершенствование</h2>
+          <button class="btn-danger" id="btnOuroboros">🐍 Уроборос</button>
         </div>
-      </div>
-      <div class="swarm-layout">
-        <div class="swarm-col">
-          <h3>Задача для роя</h3>
-          <textarea id="swarm-task-input" rows="4" placeholder="Опишите задачу для нескольких агентов…"></textarea>
-          <div class="swarm-roles">
-            <label><input type="checkbox" value="researcher" checked> 🔍 Исследователь</label>
-            <label><input type="checkbox" value="analyst" checked> 📊 Аналитик</label>
-            <label><input type="checkbox" value="writer" checked> ✍️ Автор</label>
-            <label><input type="checkbox" value="critic"> 🎯 Критик</label>
+        <div class="improve-body">
+          <div class="quality-cards" id="qualityCards">
+            <div class="quality-card"><div class="quality-label">Полнота</div><div class="quality-bar-wrap"><div class="quality-bar" id="qBarCompleteness"></div></div><div class="quality-val" id="qValCompleteness">—</div></div>
+            <div class="quality-card"><div class="quality-label">Точность</div><div class="quality-bar-wrap"><div class="quality-bar" id="qBarAccuracy"></div></div><div class="quality-val" id="qValAccuracy">—</div></div>
+            <div class="quality-card"><div class="quality-label">Полезность</div><div class="quality-bar-wrap"><div class="quality-bar" id="qBarHelpfulness"></div></div><div class="quality-val" id="qValHelpfulness">—</div></div>
+            <div class="quality-card main"><div class="quality-label">Общая оценка</div><div class="quality-bar-wrap"><div class="quality-bar quality-bar-main" id="qBarOverall"></div></div><div class="quality-val" id="qValOverall">—</div></div>
           </div>
-          <div id="swarm-status" class="swarm-status hidden">
-            <span class="spinner">⟳</span> Агенты работают…
+          <div class="weak-points-section">
+            <h3>Слабые места</h3>
+            <div id="weakPointsList" class="weak-tags"></div>
           </div>
-        </div>
-        <div class="swarm-col swarm-result-col">
-          <h3>Синтез</h3>
-          <div id="swarm-synthesis" class="swarm-synthesis">
-            <p class="empty-state">Результат появится здесь после запуска роя.</p>
+          <div class="status-history-section">
+            <h3>История статусов</h3>
+            <div id="statusHistory" class="status-history-list"></div>
+            <button class="btn-secondary" id="btnLoadHistory">Загрузить</button>
           </div>
-          <div id="swarm-agent-results" class="swarm-agent-results hidden"></div>
-        </div>
-      </div>
-      <div class="swarm-content-section">
-        <h3>Контент-пайплайн</h3>
-        <div class="content-form">
-          <input id="content-topic" type="text" placeholder="Тема контента…" />
-          <select id="content-type">
-            <option value="blog_post">📝 Блог-пост</option>
-            <option value="social_post">📱 Соцсети</option>
-            <option value="summary">📋 Резюме</option>
-            <option value="script">🎬 Скрипт</option>
-            <option value="email">📧 Email</option>
-          </select>
-          <button id="content-generate-btn" class="btn-secondary">Создать контент</button>
-        </div>
-        <div id="content-result" class="content-result hidden"></div>
-      </div>
-    </div><!-- /view-swarm -->
-
-    <!-- ВИД: ПРОЕКТЫ -->
-    <div id="view-projects" class="view">
-      <div class="view-header">
-        <h2>📁 Проекты</h2>
-        <div class="view-header-actions">
-          <button id="new-project-btn" class="btn-primary">+ Новый проект</button>
-        </div>
-      </div>
-      <div class="projects-layout">
-        <div class="projects-list-col">
-          <div id="projects-list" class="projects-list">
-            <p class="empty-state">Нет проектов. Создайте первый!</p>
-          </div>
-        </div>
-        <div class="project-detail-col">
-          <div id="project-detail" class="project-detail">
-            <p class="empty-state">Выберите проект слева.</p>
+          <div class="improve-proposals">
+            <h3>Предложения по улучшению</h3>
+            <div id="proposalsList"></div>
+            <button class="btn-secondary" id="btnLoadProposals">Загрузить предложения</button>
           </div>
         </div>
       </div>
-      <!-- Форма создания проекта -->
-      <div id="new-project-form" class="new-project-form hidden">
-        <h3>Новый проект</h3>
-        <input id="project-name" type="text" placeholder="Название проекта…" />
-        <textarea id="project-goal" rows="2" placeholder="Цель проекта…"></textarea>
-        <input id="project-deadline" type="date" />
-        <div class="form-actions">
-          <button id="create-project-btn" class="btn-primary">Создать</button>
-          <button id="cancel-project-btn" class="btn-ghost">Отмена</button>
-        </div>
-      </div>
-    </div><!-- /view-projects -->
 
-    <!-- ВИД: ГРАФ ЗНАНИЙ -->
-    <div id="view-knowledge" class="view">
-      <div class="view-header">
-        <h2>🧠 Граф знаний</h2>
-        <div class="view-header-actions">
-          <button id="refresh-knowledge-btn" class="btn-ghost">↻ Обновить</button>
-        </div>
-      </div>
-
-      <div class="knowledge-layout">
-        <!-- Список узлов -->
-        <div class="knowledge-col knowledge-nodes-col">
-          <div class="col-header">
-            <h3>Узлы знаний</h3>
-            <select id="node-type-filter">
-              <option value="">Все типы</option>
-              <option value="insight">💡 Инсайты</option>
-              <option value="entity">📌 Сущности</option>
-              <option value="concept">🧠 Концепции</option>
-              <option value="fact">📎 Факты</option>
-            </select>
+      <!-- VIEW: SETTINGS -->
+      <div class="view" id="view-settings">
+        <div class="view-header"><h2>⚙️ Настройки</h2></div>
+        <div class="settings-body">
+          <div class="settings-section">
+            <h3>Модели</h3>
+            <div id="modelsList" class="models-grid"></div>
           </div>
-          <div id="knowledge-nodes-list" class="knowledge-nodes-list">
-            <p class="empty-state">Нет узлов. Добавьте инсайт ниже.</p>
+          <div class="settings-section">
+            <h3>Интеграции</h3>
+            <div class="integration-row">
+              <span class="integration-label">🐙 GitHub</span>
+              <input type="text" id="githubUrl" placeholder="https://github.com/owner/repo" class="integration-input" />
+              <button class="btn-secondary" id="btnGithubIngest">Загрузить</button>
+              <span class="integration-status" id="githubStatus"></span>
+            </div>
+            <div class="integration-row">
+              <span class="integration-label">🎵 TikTok</span>
+              <input type="text" id="tiktokUrl" placeholder="URL видео TikTok" class="integration-input" />
+              <button class="btn-secondary" id="btnTiktokAnalyze">Анализировать</button>
+              <span class="integration-status" id="tiktokStatus"></span>
+            </div>
+            <div class="integration-row">
+              <span class="integration-label">✈️ Telegram</span>
+              <input type="text" id="telegramChatId" placeholder="@username" class="integration-input" />
+              <button class="btn-secondary" id="btnTelegramImport">Импортировать</button>
+              <span class="integration-status" id="telegramStatus"></span>
+            </div>
           </div>
-
-          <!-- Добавить инсайт -->
-          <div class="insight-input-wrap">
-            <textarea id="insight-input" placeholder="Добавить инсайт или знание…" rows="3"></textarea>
-            <button id="add-insight-btn" class="btn-primary">💡 Добавить инсайт</button>
+          <div class="settings-section">
+            <h3>Экономика токенов</h3>
+            <div class="economy-stats" id="economyStats">
+              <div class="economy-row"><span>Сегодня ($)</span><span id="costToday">—</span></div>
+              <div class="economy-row"><span>Месяц ($)</span><span id="costMonth">—</span></div>
+              <div class="economy-row"><span>Кэш хиты</span><span id="cacheHits">—</span></div>
+            </div>
+            <button class="btn-secondary" id="btnEconomy">Обновить</button>
           </div>
-        </div>
-
-        <!-- Детали выбранного узла -->
-        <div class="knowledge-col knowledge-detail-col">
-          <div class="col-header">
-            <h3 id="node-detail-title">Выберите узел</h3>
-          </div>
-          <div id="node-detail-body" class="node-detail-body">
-            <p class="empty-state">Нажмите на узел слева, чтобы увидеть связи.</p>
+          <div class="settings-section">
+            <h3>Система</h3>
+            <div class="system-actions">
+              <button class="btn-secondary" id="btnMacStatus">💻 Статус Mac</button>
+              <button class="btn-secondary" id="btnBackup">💾 Бэкап</button>
+              <button class="btn-secondary" id="btnGitLog">📋 Git лог</button>
+            </div>
+            <div id="systemOutput" class="system-output"></div>
           </div>
         </div>
       </div>
-    </div><!-- /view-knowledge -->
 
-    <!-- ВИД: УЛУЧШЕНИЕ -->
-    <div id="view-selfimprove" class="view">
-      <div class="view-header">
-        <h2>🔬 Улучшение</h2>
-        <div class="view-header-actions">
-          <button id="ouroboros-btn" class="btn-secondary" title="Запустить цикл Уроборос">🐍 Уроборос</button>
-          <button id="run-cycle-btn" class="btn-primary">Запустить цикл</button>
-        </div>
+    </main>
+  </div>
+
+  <!-- SHORTCUTS MODAL -->
+  <div class="modal-overlay" id="shortcutsModal" style="display:none">
+    <div class="modal-card shortcuts-modal">
+      <h3>⌨️ Горячие клавиши</h3>
+      <div class="shortcuts-grid">
+        <span>Ctrl+N</span><span>Новый чат</span>
+        <span>Ctrl+K</span><span>Фокус поиска</span>
+        <span>Ctrl+Enter</span><span>Отправить</span>
+        <span>Shift+Enter</span><span>Новая строка</span>
+        <span>Esc</span><span>Стоп</span>
+        <span>Ctrl+/</span><span>Горячие клавиши</span>
       </div>
-
-      <!-- Карточки качества -->
-      <div id="quality-cards" class="quality-cards">
-        <div class="quality-card">
-          <div class="quality-label">Полнота</div>
-          <div class="quality-bar-wrap"><div id="q-completeness" class="quality-bar" style="width:0%"></div></div>
-          <div id="q-completeness-val" class="quality-val">—</div>
-        </div>
-        <div class="quality-card">
-          <div class="quality-label">Точность</div>
-          <div class="quality-bar-wrap"><div id="q-accuracy" class="quality-bar" style="width:0%"></div></div>
-          <div id="q-accuracy-val" class="quality-val">—</div>
-        </div>
-        <div class="quality-card">
-          <div class="quality-label">Полезность</div>
-          <div class="quality-bar-wrap"><div id="q-helpfulness" class="quality-bar" style="width:0%"></div></div>
-          <div id="q-helpfulness-val" class="quality-val">—</div>
-        </div>
-        <div class="quality-card">
-          <div class="quality-label">Общий балл</div>
-          <div class="quality-bar-wrap"><div id="q-overall" class="quality-bar quality-bar-main" style="width:0%"></div></div>
-          <div id="q-overall-val" class="quality-val">—</div>
-        </div>
-      </div>
-      <div id="weak-points-section" class="weak-points-section hidden">
-        <h4>Частые проблемы:</h4>
-        <div id="weak-points-list"></div>
-      </div>
-
-      <div class="improve-layout">
-        <!-- Колонка: события -->
-        <div class="improve-col">
-          <div class="col-header">
-            <h3>Последние события</h3>
-            <select id="event-severity-filter">
-              <option value="">Все</option>
-              <option value="critical">Критические</option>
-              <option value="high">Высокие</option>
-              <option value="warning">Предупреждения</option>
-              <option value="info">Инфо</option>
-            </select>
-          </div>
-          <div id="events-list" class="events-list">
-            <p class="empty-state">Загрузка событий…</p>
-          </div>
-        </div>
-
-        <!-- Колонка: предложения -->
-        <div class="improve-col">
-          <div class="col-header">
-            <h3>Предложения</h3>
-            <button id="refresh-proposals-btn" class="btn-ghost">↻ Обновить</button>
-          </div>
-          <div id="proposals-list" class="proposals-list">
-            <p class="empty-state">Загрузка предложений…</p>
-          </div>
-        </div>
-      </div>
-    </div><!-- /view-selfimprove -->
-
-    <!-- ВИД: НАСТРОЙКИ -->
-    <div id="view-settings" class="view">
-      <div class="view-header"><h2>⚙️ Настройки</h2></div>
-      <div class="settings-body">
-        <section class="settings-section">
-          <h3>Подключение</h3>
-          <label>URL сервера
-            <input type="text" id="setting-server" value="http://localhost:8000" />
-          </label>
-        </section>
-        <section class="settings-section">
-          <h3>Модель</h3>
-          <label>Режим маршрутизации по умолчанию
-            <select id="setting-mode">
-              <option value="">Авто (умная маршрутизация)</option>
-              <option value="cloud">Всегда облако — Kimi K2.5</option>
-              <option value="local">Всегда локально — Ollama</option>
-            </select>
-          </label>
-        </section>
-        <section class="settings-section">
-          <h3>Оформление</h3>
-          <label>Тема
-            <select id="setting-theme">
-              <option value="dark">Тёмная</option>
-              <option value="light">Светлая</option>
-            </select>
-          </label>
-        </section>
-        <section class="settings-section">
-          <h3>Папки</h3>
-          <div id="folder-manager" class="folder-manager"></div>
-          <button id="add-folder-btn" class="btn-secondary">+ Новая папка</button>
-        </section>
-        <section class="settings-section">
-          <h3>Интеграции</h3>
-          <div id="integrations-list" class="integrations-list">
-            <!-- рендерится через JS -->
-          </div>
-        </section>
-        <button id="save-settings-btn" class="btn-primary">Сохранить настройки</button>
-        <div class="settings-about">
-          <strong>ROSA OS v4.0.0</strong><br/>
-          Мозг: Kimi K2.5 через OpenRouter<br/>
-          Строитель: Claude Code<br/>
-          Будущее: интеграция Perplexity Computer<br/>
-          <a href="/docs/CONSTITUTION.md" target="_blank">Конституция</a> ·
-          <a href="/api/docs" target="_blank">API документация</a>
-        </div>
-      </div>
-    </div><!-- /view-settings -->
-
-  </main>
-</div>
-
-<!-- Модальное окно подтверждения -->
-<div id="modal-overlay" class="modal-overlay hidden">
-  <div class="modal">
-    <h3 id="modal-title">Подтверждение</h3>
-    <p id="modal-body"></p>
-    <div class="modal-actions">
-      <button id="modal-cancel" class="btn-ghost">Отмена</button>
-      <button id="modal-confirm" class="btn-danger">Подтвердить</button>
+      <button class="btn-ghost" onclick="document.getElementById('shortcutsModal').style.display='none'">Закрыть</button>
     </div>
   </div>
-</div>
 
-<script src="/app/app.js"></script>
+  <script src="/app/app.js"></script>
 </body>
 </html>

@@ -34,6 +34,14 @@ async def get_page_text(url: str, wait_for: str = "load") -> dict[str, Any]:
     Returns:
         {"success": bool, "text": str, "title": str, "url": str}
     """
+    try:
+        from urllib.parse import urlparse
+        domain = urlparse(url).netloc or url
+        from core.status.tracker import set_status, RosaStatus
+        set_status(RosaStatus.BROWSING, f"Открываю {domain}", url=url)
+    except Exception:
+        pass
+
     if not is_available():
         # Fallback to httpx for simple text extraction
         return await _httpx_fallback(url)

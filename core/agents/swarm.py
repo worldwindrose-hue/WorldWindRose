@@ -106,6 +106,13 @@ async def run_swarm(
     """
     active_roles = roles or ["researcher", "analyst", "writer"]
 
+    # Update status
+    try:
+        from core.status.tracker import set_status, RosaStatus
+        set_status(RosaStatus.SWARMING, f"Рой агентов: {', '.join(active_roles)}", agents=len(active_roles))
+    except Exception:
+        pass
+
     # Run all agents in parallel
     agent_tasks = [_call_agent(role, task, context) for role in active_roles]
     results = await asyncio.gather(*agent_tasks)

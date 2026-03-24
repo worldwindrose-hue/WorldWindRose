@@ -56,6 +56,15 @@ class Settings(BaseSettings):
     app_version: str = "3.0.0"
     debug: bool = False
 
+    # Integrations
+    github_token: str = ""
+    telegram_api_id: str = ""
+    telegram_api_hash: str = ""
+    telegram_phone: str = ""
+    telegram_session: str = ""
+    telegram_bot_token: str = ""
+    telegram_owner_chat_id: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

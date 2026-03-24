@@ -140,6 +140,11 @@ async def _scheduler_loop() -> None:
         # Morning briefing at 07:00
         if now.hour == 7 and now.minute == 0:
             try:
+                from core.status.tracker import set_status, RosaStatus
+                set_status(RosaStatus.ACTING, "Генерирую утренний брифинг")
+            except Exception:
+                pass
+            try:
                 briefing = await _morning_briefing()
                 logger.info("Morning briefing: %s", briefing["message"][:80])
             except Exception as exc:

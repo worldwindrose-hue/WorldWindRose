@@ -37,6 +37,15 @@ from core.api.agents import router as agents_router
 from core.api.pal import router as pal_router
 from core.api.proactive import router as proactive_router
 from core.api.vision import router as vision_router
+from core.api.status import router as status_router
+from core.api.fs import router as fs_router
+from core.api.search import router as search_router
+from core.api.mac import router as mac_router
+from core.api.telegram import router as telegram_router
+from core.api.coding import router as coding_router
+from core.api.swarm import router as swarm_auto_router
+from core.api.economy import router as economy_router
+from core.api.planning import router as planning_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -70,6 +79,29 @@ async def lifespan(app: FastAPI):
         logger.info("Proactive scheduler started")
     except Exception as exc:
         logger.warning("Proactive scheduler failed to start: %s", exc)
+
+    # Start offline monitor
+    try:
+        from core.offline.local_mode import start_offline_monitor
+        start_offline_monitor()
+        logger.info("Offline monitor started")
+    except Exception as exc:
+        logger.warning("Offline monitor failed to start: %s", exc)
+
+    # Start backup scheduler
+    try:
+        from core.memory.backup import start_backup_scheduler
+        start_backup_scheduler()
+        logger.info("Backup scheduler started")
+    except Exception as exc:
+        logger.warning("Backup scheduler failed to start: %s", exc)
+
+    # Set initial status
+    try:
+        from core.status.tracker import set_status, RosaStatus
+        set_status(RosaStatus.ONLINE, "ROSA OS запущена и готова к работе")
+    except Exception:
+        pass
 
     yield
 
@@ -121,6 +153,15 @@ def create_app() -> FastAPI:
     app.include_router(pal_router)
     app.include_router(proactive_router)
     app.include_router(vision_router)
+    app.include_router(status_router)
+    app.include_router(fs_router)
+    app.include_router(search_router)
+    app.include_router(mac_router)
+    app.include_router(telegram_router)
+    app.include_router(coding_router)
+    app.include_router(swarm_auto_router)
+    app.include_router(economy_router)
+    app.include_router(planning_router)
 
     # Health check
     @app.get("/health", tags=["system"])

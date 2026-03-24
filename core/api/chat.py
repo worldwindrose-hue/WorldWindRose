@@ -104,6 +104,13 @@ async def ws_chat(websocket: WebSocket, session_id: str | None = None) -> None:
 
             await websocket.send_json({"type": "thinking", "session_id": session_id})
 
+            # Update Rosa's status
+            try:
+                from core.status.tracker import set_status, RosaStatus
+                set_status(RosaStatus.THINKING, f"Обрабатываю: {message[:60]}")
+            except Exception:
+                pass
+
             try:
                 result = await rosa.chat(
                     message=message,
@@ -120,6 +127,13 @@ async def ws_chat(websocket: WebSocket, session_id: str | None = None) -> None:
                     "confidence": result["confidence"],
                     "session_id": session_id,
                 })
+
+                # Back to online
+                try:
+                    from core.status.tracker import set_status, RosaStatus
+                    set_status(RosaStatus.ONLINE, "Готова к работе")
+                except Exception:
+                    pass
 
                 # Persist + metacognition (fire-and-forget)
                 try:

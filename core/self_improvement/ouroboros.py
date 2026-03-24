@@ -221,6 +221,12 @@ async def run_cycle() -> dict[str, Any]:
     started_at = datetime.now(timezone.utc).isoformat()
     logger.info("Ouroboros cycle %s started", cycle_id)
 
+    try:
+        from core.status.tracker import set_status, RosaStatus
+        set_status(RosaStatus.UPDATING, f"Уроборос цикл {cycle_id}")
+    except Exception:
+        pass
+
     results: dict[str, Any] = {
         "cycle_id": cycle_id,
         "started_at": started_at,
