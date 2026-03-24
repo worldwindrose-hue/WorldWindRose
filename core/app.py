@@ -53,6 +53,11 @@ try:
 except Exception:
     capabilities_router = None
 
+try:
+    from core.api.audit import router as audit_router
+except Exception:
+    audit_router = None
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -122,6 +127,15 @@ async def lifespan(app: FastAPI):
         logger.info("Ingest job queue started")
     except Exception as exc:
         logger.warning("Ingest queue failed to start: %s", exc)
+
+    # Run startup audit (non-blocking)
+    try:
+        from core.audit.startup_audit import run_startup_audit
+        import asyncio
+        asyncio.create_task(run_startup_audit())
+        logger.info("Startup audit scheduled")
+    except Exception as exc:
+        logger.debug("Startup audit skipped: %s", exc)
 
     # Initialize VAPID keys for push notifications (non-blocking)
     try:
@@ -207,6 +221,8 @@ def create_app() -> FastAPI:
     app.include_router(ingest_router)
     if capabilities_router:
         app.include_router(capabilities_router)
+    if audit_router:
+        app.include_router(audit_router)
 
     # Health check
     @app.get("/health", tags=["system"])
