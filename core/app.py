@@ -48,6 +48,10 @@ from core.api.swarm import router as swarm_auto_router
 from core.api.economy import router as economy_router
 from core.api.planning import router as planning_router
 from core.api.ingest import router as ingest_router
+try:
+    from core.api.capabilities import router as capabilities_router
+except Exception:
+    capabilities_router = None
 
 logging.basicConfig(
     level=logging.INFO,
@@ -201,6 +205,8 @@ def create_app() -> FastAPI:
     app.include_router(economy_router)
     app.include_router(planning_router)
     app.include_router(ingest_router)
+    if capabilities_router:
+        app.include_router(capabilities_router)
 
     # Health check
     @app.get("/health", tags=["system"])
