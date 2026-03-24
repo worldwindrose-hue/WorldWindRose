@@ -77,3 +77,16 @@ models/
 tmp/
 temp/
 .cache/
+
+# ROSA OS runtime / secrets (never commit)
+memory/vapid_keys.json
+memory/push_subscriptions.json
+memory/tunnel.txt
+memory/ngrok.pid
+memory/rosa.db
+memory/rosa.log
+memory/ingest_jobs.json
+memory/logs/
+memory/uploads/
+memory/backups/
+experimental/
