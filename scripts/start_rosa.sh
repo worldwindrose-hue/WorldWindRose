@@ -9,12 +9,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-VENV_PYTHON="${PROJECT_DIR}/.venv/bin/python3"
-PYTHON="${VENV_PYTHON:-python3}"
 PORT=8000
 HOST="0.0.0.0"
 LOG_DIR="${PROJECT_DIR}/memory/logs"
-NGROK_TOKEN="3BOcGYvq82lU8d6UIB9r9UO62Et_2zrsjGNpHviozzXKLoqVm"
 NO_TUNNEL=false
 NO_QR=false
 
@@ -27,7 +24,7 @@ for arg in "$@"; do
 done
 
 # ── Setup ──────────────────────────────────────────────────
-mkdir -p "$LOG_DIR"
+mkdir -p "$LOG_DIR" "${PROJECT_DIR}/memory"
 cd "$PROJECT_DIR"
 
 echo ""
@@ -47,47 +44,68 @@ echo ""
 echo "🛑 Stopping existing ROSA processes..."
 pkill -f "uvicorn core.app:app" 2>/dev/null || true
 pkill -f "ngrok http ${PORT}"   2>/dev/null || true
+pkill -f "start_rosa_tunnel"    2>/dev/null || true
 sleep 1
 
 # ── Start ngrok tunnel ─────────────────────────────────────
 if [ "$NO_TUNNEL" = false ]; then
   echo ""
   echo "🔌 Starting ngrok tunnel..."
-  TUNNEL_URL=$(python3 - <<PYEOF
-import sys
-from pyngrok import ngrok, conf
 
-conf.get_default().auth_token = '${NGROK_TOKEN}'
-tunnel = ngrok.connect(${PORT}, 'http')
-url = tunnel.public_url.replace('http://', 'https://')
-print(url)
+  # Use native ngrok binary (brew-installed)
+  NGROK_BIN=$(command -v ngrok || echo "/opt/homebrew/bin/ngrok")
 
-import pathlib
-pathlib.Path('memory/tunnel.txt').write_text(url)
-PYEOF
-  )
-  echo "🌐 Public URL: ${TUNNEL_URL}"
-  echo ""
+  # Start ngrok in background, output JSON to file
+  NGROK_LOG="${LOG_DIR}/ngrok.log"
+  "$NGROK_BIN" http "$PORT" --log=stdout --log-format=json > "$NGROK_LOG" 2>&1 &
+  NGROK_PID=$!
+  echo $NGROK_PID > "${PROJECT_DIR}/memory/ngrok.pid"
 
-  # Save for use below
-  echo "$TUNNEL_URL" > memory/tunnel.txt
+  # Poll until tunnel URL appears in log (max 10s)
+  TUNNEL_URL=""
+  for i in {1..20}; do
+    sleep 0.5
+    TUNNEL_URL=$(python3 -c "
+import json, sys
+try:
+    with open('${NGROK_LOG}') as f:
+        for line in f:
+            try:
+                d = json.loads(line)
+                if d.get('msg') == 'started tunnel':
+                    print(d.get('url',''))
+                    break
+            except: pass
+except: pass
+" 2>/dev/null || true)
+    [ -n "$TUNNEL_URL" ] && break
+  done
 
-  if [ "$NO_QR" = false ]; then
-    echo "📱 QR Code (scan with iPhone Camera):"
+  if [ -z "$TUNNEL_URL" ]; then
+    echo "⚠️  Туннель не запустился за 10с — проверьте ngrok.log"
+    echo "   Продолжаю без публичного URL..."
+  else
+    # Ensure HTTPS
+    TUNNEL_URL="${TUNNEL_URL/http:\/\//https://}"
+    echo "$TUNNEL_URL" > "${PROJECT_DIR}/memory/tunnel.txt"
+    echo "🌐 Public URL: ${TUNNEL_URL}"
     echo ""
-    python3 -c "
-import qrcode, sys
-url = open('memory/tunnel.txt').read().strip()
+
+    if [ "$NO_QR" = false ]; then
+      echo "📱 QR Code (scan with iPhone Camera):"
+      echo ""
+      python3 -c "
+import qrcode
+url = '${TUNNEL_URL}'
 qr = qrcode.QRCode(border=1)
 qr.add_data(url)
 qr.make(fit=True)
 qr.print_ascii(invert=True)
 print()
-print('URL:', url)
-" 2>/dev/null || python3 -c "print('  (pip install qrcode to show QR)')"
+print('  → ' + url)
+" 2>/dev/null || echo "  (pip install qrcode to show QR)"
+    fi
   fi
-else
-  TUNNEL_URL="(туннель отключён)"
 fi
 
 # ── Start uvicorn with --host 0.0.0.0 ─────────────────────
