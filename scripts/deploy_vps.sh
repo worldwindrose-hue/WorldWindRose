@@ -1,137 +1,77 @@
 #!/usr/bin/env bash
 # ============================================================
-# ROSA OS v5 — VPS Deployment Script
-# Supports: Hetzner Cloud, DigitalOcean, any Ubuntu 22.04 VPS
+# ROSA OS — One-Command VPS Deployment (v6)
+# Usage: ./scripts/deploy_vps.sh user@your-vps.com [yourdomain.com]
 # ============================================================
+
 set -euo pipefail
 
-# ── CONFIGURATION ─────────────────────────────────────────────────────────
-VPS_USER="${VPS_USER:-root}"
-VPS_HOST="${VPS_HOST:-}"
-VPS_PORT="${VPS_PORT:-22}"
-REMOTE_DIR="${REMOTE_DIR:-/opt/rosa}"
-DOMAIN="${DOMAIN:-}"  # optional: yourdomain.com
+VPS="${1:-${ROSA_VPS:-}}"
+DOMAIN="${2:-${ROSA_DOMAIN:-}}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+REMOTE_DIR="/opt/rosa"
 
-if [ -z "$VPS_HOST" ]; then
-    echo "Usage: VPS_HOST=1.2.3.4 [VPS_USER=root] [DOMAIN=yourdomain.com] $0"
+if [ -z "$VPS" ]; then
+    echo "Usage: $0 user@vps.host [domain.com]"
+    echo "Or set ROSA_VPS environment variable"
     exit 1
 fi
 
-ROSA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SSH="ssh -p $VPS_PORT $VPS_USER@$VPS_HOST"
-SCP="scp -P $VPS_PORT"
-
-echo "🚀 Deploying ROSA OS to $VPS_USER@$VPS_HOST:$REMOTE_DIR"
+echo ""
+echo "🌹 ================================================"
+echo "   ROSA OS v6 — Deploying to $VPS"
+[ -n "$DOMAIN" ] && echo "   Domain: $DOMAIN"
+echo "🌹 ================================================"
 echo ""
 
-# ── REMOTE SETUP ──────────────────────────────────────────────────────────
-echo "1️⃣  Setting up server..."
-$SSH << 'REMOTE'
-set -e
-# Docker
-if ! command -v docker &>/dev/null; then
-    curl -fsSL https://get.docker.com | sh
-    systemctl enable docker
-    systemctl start docker
-fi
-# docker-compose
-if ! command -v docker-compose &>/dev/null; then
-    curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-fi
-REMOTE
-echo "   ✅ Server ready"
+echo "📁 Preparing remote..."
+ssh "$VPS" "mkdir -p $REMOTE_DIR/memory $REMOTE_DIR/memory/logs"
 
-# ── SYNC CODE ─────────────────────────────────────────────────────────────
-echo "2️⃣  Syncing code..."
-$SSH "mkdir -p $REMOTE_DIR/memory"
+echo "📤 Syncing code..."
 rsync -avz --progress \
-    --exclude=".git" \
-    --exclude="__pycache__" \
-    --exclude="*.pyc" \
-    --exclude=".env" \
-    --exclude="memory/*.db" \
-    --exclude="memory/chroma" \
-    -e "ssh -p $VPS_PORT" \
-    "$ROSA_DIR/" "$VPS_USER@$VPS_HOST:$REMOTE_DIR/"
-echo "   ✅ Code synced"
+    --exclude ".git" --exclude "memory/*.db" --exclude "memory/*.log" \
+    --exclude "memory/*.json" --exclude "__pycache__" --exclude "*.pyc" \
+    --exclude ".env" --exclude ".venv" \
+    "$PROJECT_DIR/" "$VPS:$REMOTE_DIR/"
 
-# ── SYNC ENV ──────────────────────────────────────────────────────────────
-echo "3️⃣  Syncing .env..."
-if [ -f "$ROSA_DIR/.env" ]; then
-    $SCP -P $VPS_PORT "$ROSA_DIR/.env" "$VPS_USER@$VPS_HOST:$REMOTE_DIR/.env"
-    echo "   ✅ .env synced"
+if [ -f "$PROJECT_DIR/.env" ]; then
+    echo "🔐 Syncing .env..."
+    scp "$PROJECT_DIR/.env" "$VPS:$REMOTE_DIR/.env"
 else
-    echo "   ⚠️  No .env found — create one on the server!"
+    echo "⚠️  No .env — create manually on VPS"
 fi
 
-# ── DOCKER BUILD + DEPLOY ─────────────────────────────────────────────────
-echo "4️⃣  Building and starting containers..."
-$SSH << REMOTE
-cd $REMOTE_DIR
-docker-compose build --no-cache
-docker-compose down --remove-orphans || true
-docker-compose up -d
-echo "   ✅ Containers started"
-REMOTE
+echo "🐳 Building and starting..."
+ssh "$VPS" "cd $REMOTE_DIR && \
+    docker-compose -f docker-compose.production.yml build rosa && \
+    docker-compose -f docker-compose.production.yml up -d rosa nginx && \
+    sleep 5 && docker-compose -f docker-compose.production.yml ps"
 
-# ── OPTIONAL: SSL WITH CERTBOT ────────────────────────────────────────────
 if [ -n "$DOMAIN" ]; then
-    echo "5️⃣  Setting up SSL for $DOMAIN..."
-    $SSH << REMOTE
-apt-get install -y certbot nginx
-certbot certonly --standalone -d $DOMAIN --non-interactive --agree-tos -m admin@$DOMAIN || true
-# Create nginx config
-cat > /etc/nginx/sites-available/rosa << 'NGINX'
-server {
-    listen 80;
-    server_name $DOMAIN;
-    return 301 https://\$server_name\$request_uri;
-}
-server {
-    listen 443 ssl http2;
-    server_name $DOMAIN;
-    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
-    location / {
-        proxy_pass http://localhost:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-    }
-}
-NGINX
-ln -sf /etc/nginx/sites-available/rosa /etc/nginx/sites-enabled/rosa
-nginx -t && systemctl reload nginx
-REMOTE
-    echo "   ✅ SSL configured for $DOMAIN"
+    echo "🔒 Setting up SSL for $DOMAIN..."
+    ssh "$VPS" "cd $REMOTE_DIR && \
+        sed -i 's/server_name _;/server_name $DOMAIN;/g' nginx.conf && \
+        docker-compose -f docker-compose.production.yml restart nginx && \
+        docker run --rm \
+            -v rosa_certbot_certs:/etc/letsencrypt \
+            -v rosa_certbot_www:/var/www/certbot \
+            certbot/certbot certonly \
+            --webroot --webroot-path=/var/www/certbot \
+            --email admin@$DOMAIN --agree-tos --no-eff-email -d $DOMAIN && \
+        docker-compose -f docker-compose.production.yml --profile ssl up -d"
 fi
 
-# ── STATUS CHECK ──────────────────────────────────────────────────────────
-echo ""
-echo "5️⃣  Checking health..."
-sleep 5
-STATUS=$($SSH "curl -sf http://localhost:8000/health || echo 'FAILED'")
-if echo "$STATUS" | grep -q "ok"; then
-    echo "   ✅ ROSA OS is healthy!"
-else
-    echo "   ❌ Health check failed. Check logs:"
-    echo "   $SSH 'cd $REMOTE_DIR && docker-compose logs --tail=50'"
-    exit 1
-fi
+# Hourly memory sync cron
+(crontab -l 2>/dev/null; echo "0 * * * * ROSA_VPS=$VPS bash $SCRIPT_DIR/sync_memory.sh auto >> /tmp/rosa_sync.log 2>&1") | \
+    sort -u | crontab - 2>/dev/null || true
+
+sleep 3
+echo "🔍 Health check..."
+ssh "$VPS" "curl -sf http://localhost:8000/health && echo '✅ ROSA is healthy'" || \
+    echo "⚠️  Check logs: ssh $VPS 'docker logs rosa_os'"
 
 echo ""
-echo "════════════════════════════════════"
-echo "🎉 ROSA OS deployed successfully!"
-if [ -n "$DOMAIN" ]; then
-    echo "   URL: https://$DOMAIN"
-else
-    echo "   URL: http://$VPS_HOST:8000"
-fi
-echo ""
-echo "   Useful commands:"
-echo "   $SSH 'cd $REMOTE_DIR && docker-compose logs -f'"
-echo "   $SSH 'cd $REMOTE_DIR && docker-compose restart rosa'"
-echo "════════════════════════════════════"
+echo "🌹 ROSA OS v6 deployed!"
+[ -n "$DOMAIN" ] && echo "   URL: https://$DOMAIN"
+echo "   VPS: http://$(echo $VPS | cut -d@ -f2):8000"
