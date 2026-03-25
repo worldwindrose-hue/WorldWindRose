@@ -497,8 +497,8 @@ class RosaDesktop {
     }
 
     scrollToBottom() {
-        const container = document.getElementById('messages-container');
-        container.scrollTop = container.scrollHeight;
+        const container = document.getElementById('messages-area');
+        if (container) container.scrollTop = container.scrollHeight;
     }
 
     toggleMode() {
@@ -569,7 +569,37 @@ class RosaDesktop {
 
     // Placeholder methods
     attachFile() {
-        alert('📎 Прикрепление файлов - в разработке');
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.txt,.pdf,.png,.jpg,.jpeg,.gif,.webp,.md,.py,.js,.json,.csv';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            this.addMessage({ role: 'user', content: 'Файл: ' + file.name + ' (' + Math.round(file.size/1024) + ' KB)', timestamp: new Date().toISOString() });
+            this.showTyping();
+            try {
+                const res = await fetch(this.apiUrl + '/api/files/upload', { method: 'POST', body: formData });
+                if (!res.ok) {
+                    const errData = await res.json().catch(function() { return {}; });
+                    throw new Error(errData.detail || 'HTTP ' + res.status);
+                }
+                const data = await res.json();
+                this.hideTyping();
+                const prompt = '[File: ' + file.name + ']\n\n' + data.extracted_text;
+                const response = await this.api('/chat', {
+                    method: 'POST',
+                    body: JSON.stringify({ message: prompt, session_id: this.currentSession, mode: this.mode })
+                });
+                if (response.session_id) this.currentSession = response.session_id;
+                this.addMessage({ role: 'assistant', content: response.response || 'File received.', timestamp: new Date().toISOString() });
+            } catch (error) {
+                this.hideTyping();
+                this.addMessage({ role: 'assistant', content: 'Error: ' + error.message, timestamp: new Date().toISOString(), isError: true });
+            }
+        };
+        input.click();
     }
 
     voiceInput() {
