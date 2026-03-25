@@ -1,363 +1,1076 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ROSA OS v5</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROSA OS v5 — Autonomous AI</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&family=SF+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: rgba(28, 28, 30, 0.72);
+            --bg-tertiary: rgba(44, 44, 46, 0.6);
+            --glass-bg: rgba(28, 28, 30, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-highlight: rgba(255, 255, 255, 0.05);
+            
+            --accent-primary: #0A84FF;
+            --accent-secondary: #BF5AF2;
+            --accent-tertiary: #FF9F0A;
+            --accent-success: #30D158;
+            --accent-error: #FF453A;
+            
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-tertiary: rgba(255, 255, 255, 0.5);
+            
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
+            
+            --blur-amount: 24px;
+            --saturation: 180%;
+            
+            --radius-sm: 10px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --radius-xl: 32px;
+        }
 
-  <!-- PWA -->
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#10a37f" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="ROSA" />
-  <link rel="apple-touch-icon" href="/icons/icon.svg" />
-  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
 
-  <link rel="stylesheet" href="/app/style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+        @supports (font: -apple-system-body) {
+            body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; }
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+            line-height: 1.5;
+        }
+
+        /* Animated Background Gradient */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(10, 132, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(191, 90, 242, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(255, 159, 10, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+            animation: gradientShift 20s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        /* Glass Container */
+        .app-container {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: 300px 1fr 340px;
+            grid-template-rows: 64px 1fr 36px;
+            height: 100vh;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        /* Glass Card Mixin */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturation));
+            -webkit-backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturation));
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .glass-light {
+            background: var(--glass-highlight);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 20px rgba(10, 132, 255, 0.4);
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-tab::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: inherit;
+        }
+
+        .nav-tab span { position: relative; z-index: 1; }
+
+        .nav-tab:hover { color: var(--text-primary); }
+        .nav-tab.active { color: var(--text-primary); }
+        .nav-tab.active::before { opacity: 1; }
+
+        .system-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-tertiary);
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(48, 209, 88, 0.15);
+            border-radius: 20px;
+            color: var(--accent-success);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.9); }
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 16px;
+        }
+
+        .sidebar-header {
+            margin-bottom: 16px;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            border-radius: var(--radius-md);
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 20px rgba(10, 132, 255, 0.3);
+        }
+
+        .new-chat-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(10, 132, 255, 0.5);
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+            margin: 20px 0 12px;
+            padding: 0 8px;
+        }
+
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .chat-item {
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+
+        .chat-item:hover { background: var(--glass-highlight); }
+        .chat-item.active { 
+            background: linear-gradient(90deg, rgba(10, 132, 255, 0.2), transparent);
+            border-left: 3px solid var(--accent-primary);
+        }
+
+        .chat-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .chat-info { flex: 1; min-width: 0; }
+        .chat-title {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .chat-preview {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .view { 
+            display: none; 
+            height: 100%; 
+            flex-direction: column;
+            animation: fadeIn 0.3s ease;
+        }
+        .view.active { display: flex; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Chat Header */
+        .chat-header {
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .chat-title-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .chat-title-main { 
+            font-size: 18px; 
+            font-weight: 600;
+            letter-spacing: -0.2px;
+        }
+
+        .chat-subtitle {
+            font-size: 13px;
+            color: var(--text-tertiary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            background: var(--glass-highlight);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            transform: scale(1.05);
+        }
+
+        /* Messages */
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            scroll-behavior: smooth;
+        }
+
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100%;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .welcome-logo {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            margin-bottom: 32px;
+            box-shadow: 
+                0 20px 60px rgba(10, 132, 255, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .welcome-title { 
+            font-size: 36px; 
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff, rgba(255,255,255,0.7));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .welcome-subtitle { 
+            color: var(--text-tertiary); 
+            font-size: 16px;
+            margin-bottom: 40px;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            max-width: 700px;
+            width: 100%;
+        }
+
+        .quick-action {
+            padding: 24px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: left;
+        }
+
+        .quick-action:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .quick-action-icon { 
+            font-size: 32px; 
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .quick-action-title { 
+            font-size: 15px; 
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .quick-action-desc { 
+            font-size: 13px; 
+            color: var(--text-tertiary);
+            line-height: 1.4;
+        }
+
+        /* Message Bubbles */
+        .message {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .message.user { flex-direction: row-reverse; }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .message-avatar.user { 
+            background: linear-gradient(135deg, #5856D6, #AF52DE);
+        }
+        .message-avatar.rosa {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        }
+
+        .message-content {
+            max-width: 80%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .message-bubble {
+            padding: 16px 20px;
+            border-radius: var(--radius-lg);
+            font-size: 15px;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, var(--accent-primary), #5856D6);
+            border-bottom-right-radius: 6px;
+        }
+
+        .message.rosa .message-bubble {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-bottom-left-radius: 6px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            padding: 0 4px;
+        }
+
+        .message.user .message-time { text-align: right; }
+
+        /* Input Area */
+        .input-area {
+            padding: 20px 24px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-xl);
+            padding: 12px 16px;
+            transition: all 0.3s;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
+        }
+
+        .message-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 15px;
+            resize: none;
+            min-height: 24px;
+            max-height: 200px;
+            font-family: inherit;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        .message-input::placeholder { color: var(--text-tertiary); }
+
+        .input-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .input-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+
+        .input-btn:hover { 
+            background: var(--glass-highlight);
+            color: var(--text-primary);
+        }
+
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(10, 132, 255, 0.4);
+        }
+
+        .send-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(10, 132, 255, 0.6);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 6px;
+            padding: 20px;
+            align-items: center;
+        }
+
+        .typing-bubble {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 16px 24px;
+            display: flex;
+            gap: 6px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            animation: typingBounce 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-8px); }
+        }
+
+        /* Right Panel */
+        .right-panel {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .panel-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+        }
+
+        .panel-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+            margin-bottom: 16px;
+        }
+
+        /* Self-Improve Cards */
+        .improve-card {
+            background: linear-gradient(135deg, rgba(255, 159, 10, 0.1), rgba(191, 90, 242, 0.1));
+            border: 1px solid rgba(255, 159, 10, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .improve-card:hover {
+            border-color: var(--accent-tertiary);
+            transform: translateX(4px);
+        }
+
+        .improve-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .improve-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent-tertiary), #FF375F);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .improve-title { font-weight: 600; font-size: 14px; }
+        .improve-desc { 
+            font-size: 12px; 
+            color: var(--text-tertiary);
+            line-height: 1.4;
+        }
+
+        /* Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .metric-item {
+            text-align: center;
+            padding: 16px;
+            background: var(--glass-highlight);
+            border-radius: var(--radius-sm);
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Footer */
+        .footer {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .footer-left {
+            display: flex;
+            gap: 20px;
+        }
+
+        .footer-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Code blocks */
+        pre {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            overflow-x: auto;
+            margin: 12px 0;
+            border: 1px solid var(--glass-border);
+        }
+
+        code {
+            font-family: 'SF Mono', 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .app-container { grid-template-columns: 260px 1fr 300px; }
+        }
+
+        @media (max-width: 900px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 64px 1fr 36px;
+            }
+            .sidebar, .right-panel { display: none; }
+        }
+    </style>
 </head>
 <body>
-  <div class="app-layout">
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-top">
-        <div class="sidebar-logo">
-          <span class="logo-icon">🌹</span>
-          <span class="logo-text">ROSA OS <span class="version-badge">v5</span></span>
-        </div>
-        <button class="btn-new-chat" id="btnNewChat" onclick="newChat()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Новый чат
-        </button>
-      </div>
-
-      <div class="sidebar-search">
-        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" id="chatSearch" placeholder="Поиск чатов..." />
-      </div>
-
-      <div class="chat-list" id="chatList"></div>
-
-      <nav class="sidebar-nav">
-        <a href="#" class="nav-item active" data-view="chat">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Чат
-        </a>
-        <a href="#" class="nav-item" data-view="swarm">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
-          Рой агентов
-        </a>
-        <a href="#" class="nav-item" data-view="knowledge">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-          Знания
-        </a>
-        <a href="#" class="nav-item" data-view="projects">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          Проекты
-        </a>
-        <a href="#" class="nav-item" data-view="improve">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-          Улучшение
-        </a>
-        <a href="#" class="nav-item" data-view="settings">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Настройки
-        </a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="user-profile">
-          <div class="user-avatar">👤</div>
-          <span class="user-name">Владелец</span>
-        </div>
-      </div>
-    </aside>
-
-    <!-- MAIN AREA -->
-    <main class="main-area">
-
-      <!-- VIEW: CHAT -->
-      <div class="view active" id="view-chat">
-        <header class="chat-header">
-          <button class="sidebar-toggle" id="sidebarToggle">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          </button>
-          <span class="chat-title" id="chatTitle" contenteditable="true">Новый чат</span>
-          <div class="chat-header-right">
-            <span class="model-badge" id="modelBadge">🌙 Kimi K2.5</span>
-            <button class="btn-icon" id="btnStop" style="display:none">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-            </button>
-          </div>
+    <div class="bg-gradient"></div>
+    
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header glass">
+            <div class="logo">
+                <div class="logo-icon">🌹</div>
+                <span class="logo-text">ROSA</span>
+            </div>
+            
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-view="chat" onclick="rosa.switchView('chat')">
+                    <span>💬 Чат</span>
+                </button>
+                <button class="nav-tab" data-view="memory" onclick="rosa.switchView('memory')">
+                    <span>🧠 Память</span>
+                </button>
+                <button class="nav-tab" data-view="tasks" onclick="rosa.switchView('tasks')">
+                    <span>📋 Задачи</span>
+                </button>
+                <button class="nav-tab" data-view="code" onclick="rosa.switchView('code')">
+                    <span>💻 Код</span>
+                </button>
+            </nav>
+            
+            <div class="system-info">
+                <div class="status-pill">
+                    <div class="status-dot"></div>
+                    <span>Online</span>
+                </div>
+                <span>🧠 Kimi K2.5</span>
+            </div>
         </header>
 
-        <div class="messages-container" id="messagesContainer">
-          <div class="welcome-screen" id="welcomeScreen">
-            <div class="welcome-logo">🌹</div>
-            <h1>ROSA OS v5</h1>
-            <p>Живой AI-ассистент. Всегда онлайн, помнит всё.</p>
-            <div class="welcome-suggestions">
-              <button class="suggestion-btn" onclick="sendSuggestion('Что ты умеешь делать?')">Что ты умеешь?</button>
-              <button class="suggestion-btn" onclick="sendSuggestion('Покажи статус системы')">Статус системы</button>
-              <button class="suggestion-btn" onclick="sendSuggestion('Запусти рой агентов для анализа трендов ИИ')">Запустить рой агентов</button>
-              <button class="suggestion-btn" onclick="sendSuggestion('Составь план задачи: найти новости про Python')">Составить план</button>
+        <!-- Left Sidebar -->
+        <aside class="sidebar glass">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" onclick="rosa.newChat()">
+                    <span>+</span> Новый чат
+                </button>
             </div>
-          </div>
-          <div id="messagesList"></div>
-          <div class="typing-indicator" id="typingIndicator" style="display:none">
-            <div class="typing-avatar">🌹</div>
-            <div class="typing-dots"><span></span><span></span><span></span></div>
-          </div>
-        </div>
+            
+            <div class="section-title">История <span id="chat-count" style="font-size:11px;opacity:0.6;margin-left:4px;"></span></div>
+            <div class="chat-list" id="chat-list">
+                <!-- Chats loaded dynamically -->
+            </div>
+        </aside>
 
-        <!-- STATUS BAR -->
-        <div class="status-bar" id="statusBar">
-          <div class="status-indicator">
-            <span class="status-dot green" id="statusDot"></span>
-            <span class="status-text" id="statusText">🌹 Роза онлайн</span>
-            <span class="agent-badge" style="display:none"></span>
-          </div>
-          <div class="status-agents" id="statusAgents" style="display:none">
-            <span id="agentCount">0</span> агентов
-          </div>
-        </div>
-        <!-- DETAILED STATUS (shown during autonomous tasks) -->
-        <div id="statusDetail" style="display:none; font-size:11px; color:var(--text-muted,#888); padding:2px 16px 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; animation:fadeIn 0.3s;"></div>
+        <!-- Main Content -->
+        <main class="main-content glass">
+            <!-- Chat View -->
+            <div id="chat-view" class="view active">
+                <div class="chat-header">
+                    <div class="chat-title-wrapper">
+                        <div class="chat-title-main" id="current-chat-title">Новый чат</div>
+                        <div class="chat-subtitle">ROSA готова помочь</div>
+                    </div>
+                    <div class="header-actions">
+                        <button class="icon-btn" onclick="rosa.shareChat()">🔗</button>
+                        <button class="icon-btn" onclick="rosa.openSettings()">⚙️</button>
+                    </div>
+                </div>
 
-        <!-- INPUT -->
-        <div class="input-area">
-          <div class="input-toolbar">
-            <button class="input-tool-btn" id="btnSearch" title="HyperSearch (Ctrl+Shift+S)">🔍 Поиск</button>
-            <button class="input-tool-btn" id="btnMission" title="Создать миссию">🎯 Миссия</button>
-            <button class="input-tool-btn" id="btnExecuteCode" title="Выполнить код">⚡ Код</button>
-            <span class="token-counter" id="tokenCounter">0 симв.</span>
-          </div>
-          <div class="input-wrapper">
-            <textarea id="messageInput" placeholder="Сообщение Розе... (Ctrl+Enter отправить)" rows="1" oninput="window._rosaInputHandler && window._rosaInputHandler(this)"></textarea>
-            <button class="btn-send" id="btnSend" onclick="sendMessage()" disabled>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </button>
-          </div>
-          <div class="input-hint">Ctrl+Enter — отправить · Esc — стоп · Ctrl+/ — горячие клавиши</div>
-        </div>
-      </div>
+                <div class="messages-area" id="messages-area">
+                    <div class="welcome-screen" id="welcome-screen">
+                        <div class="welcome-logo">🌹</div>
+                        <h1 class="welcome-title">ROSA OS v5</h1>
+                        <p class="welcome-subtitle">Автономный ИИ с самоулучшением</p>
+                        <div class="quick-actions">
+                            <div class="quick-action" onclick="rosa.sendQuick('Создай план изучения Python с нуля')">
+                                <span class="quick-action-icon">📚</span>
+                                <div class="quick-action-title">Обучение</div>
+                                <div class="quick-action-desc">Персональные планы обучения</div>
+                            </div>
+                            <div class="quick-action" onclick="rosa.sendQuick('Напиши код для парсинга сайта')">
+                                <span class="quick-action-icon">💻</span>
+                                <div class="quick-action-title">Разработка</div>
+                                <div class="quick-action-desc">Код, debug, архитектура</div>
+                            </div>
+                            <div class="quick-action" onclick="rosa.sendQuick('Проанализируй и улучши себя')">
+                                <span class="quick-action-icon">🔄</span>
+                                <div class="quick-action-title">Эволюция</div>
+                                <div class="quick-action-desc">Самоанализ и рост</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="messages" style="display: none;"></div>
+                </div>
 
-      <!-- VIEW: SWARM -->
-      <div class="view" id="view-swarm">
-        <div class="view-header">
-          <h2>🤖 Рой агентов</h2>
-          <p>Rosa автоматически определяет количество и тип агентов</p>
-        </div>
-        <div class="swarm-body">
-          <div class="swarm-input-card">
-            <label>Задача для роя:</label>
-            <textarea id="swarmTask" rows="3" placeholder="Исследуй тренды ИИ в 2025 году и составь отчёт..."></textarea>
-            <div class="swarm-controls">
-              <button class="btn-primary" id="btnRunSwarm" onclick="runSwarm()">▶ Запустить рой</button>
-              <button class="btn-secondary" id="btnRunAutoSwarm">⚡ Авто-рой</button>
+                <div class="input-area">
+                    <div class="input-wrapper">
+                        <textarea class="message-input" id="message-input" 
+                            placeholder="Спроси о чем угодно..." 
+                            rows="1"
+                            onkeydown="rosa.handleKeydown(event)"></textarea>
+                        <div class="input-actions">
+                            <button class="input-btn" onclick="rosa.attachFile()">📎</button>
+                            <button class="input-btn" onclick="rosa.voiceInput()">🎤</button>
+                            <button class="input-btn" onclick="rosa.toggleMode()" id="mode-btn">☁️</button>
+                            <button class="send-btn" id="send-btn" onclick="rosa.sendMessage()">➤</button>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-          <div id="swarmStatus" class="swarm-status" style="display:none">
-            <div id="swarmAgentList" class="swarm-agent-list"></div>
-          </div>
-          <div id="swarmSynthesis" class="swarm-synthesis" style="display:none">
-            <h3>Синтез результатов:</h3>
-            <div id="swarmSynthesisText"></div>
-          </div>
-          <div class="content-pipeline-card">
-            <h3>📝 Контент-пайплайн</h3>
-            <input type="text" id="contentTopic" placeholder="Тема..." />
-            <div class="content-controls">
-              <select id="contentType">
-                <option value="blog_post">Статья в блог</option>
-                <option value="social_post">Пост соцсети</option>
-                <option value="summary">Пересказ</option>
-                <option value="script">Сценарий</option>
-                <option value="email">Email</option>
-              </select>
-              <button class="btn-secondary" id="btnGenerateContent">Создать</button>
-            </div>
-            <div id="contentResult" style="display:none"></div>
-          </div>
-        </div>
-      </div>
 
-      <!-- VIEW: KNOWLEDGE -->
-      <div class="view" id="view-knowledge">
-        <div class="view-header"><h2>🧠 База знаний</h2></div>
-        <div class="knowledge-body">
-          <div class="knowledge-search-bar">
-            <input type="text" id="knowledgeSearch" placeholder="Поиск по памяти Розы..." />
-            <button class="btn-primary" id="btnKnowledgeSearch" onclick="searchKnowledge()">Искать</button>
-            <button class="btn-secondary" id="btnHyperSearch" onclick="runHyperSearch()">🔍 HyperSearch</button>
-          </div>
-          <div class="knowledge-stats" id="knowledgeStats">
-            <div class="stat-card"><span class="stat-num" id="statNodes">—</span><span class="stat-label">Узлов</span></div>
-            <div class="stat-card"><span class="stat-num" id="statCacheHits">—</span><span class="stat-label">Кэш хиты</span></div>
-          </div>
-          <div id="knowledgeResults" class="knowledge-results"></div>
-          <div id="recentFacts" class="facts-list"><p class="placeholder">Загрузка...</p></div>
-        </div>
-      </div>
+            <!-- Memory View -->
+            <div id="memory-view" class="view">
+                <div class="chat-header">
+                    <div class="chat-title-wrapper">
+                        <div class="chat-title-main">🧠 Память системы</div>
+                        <div class="chat-subtitle">Все знания и воспоминания</div>
+                    </div>
+                </div>
+                <div class="messages-area" id="memory-content">
+                    <div class="loading">Загрузка...</div>
+                </div>
+            </div>
 
-      <!-- VIEW: PROJECTS -->
-      <div class="view" id="view-projects">
-        <div class="view-header">
-          <h2>📁 Проекты</h2>
-          <button class="btn-primary" id="btnNewProject" onclick="showNewProjectModal()">+ Новый проект</button>
-        </div>
-        <div class="projects-layout">
-          <div class="projects-list" id="projectsList"></div>
-          <div class="project-detail" id="projectDetail" style="display:none">
-            <h3 id="projectDetailName"></h3>
-            <div class="progress-bar"><div class="progress-fill" id="projectProgressFill"></div></div>
-            <div id="projectTasks" class="task-list"></div>
-            <div class="add-task-form">
-              <input type="text" id="newTaskInput" placeholder="Добавить задачу..." />
-              <button class="btn-secondary" id="btnAddTask">Добавить</button>
+            <!-- Tasks View -->
+            <div id="tasks-view" class="view">
+                <div class="chat-header">
+                    <div class="chat-title-wrapper">
+                        <div class="chat-title-main">📋 Задачи</div>
+                        <div class="chat-subtitle">Управление делами</div>
+                    </div>
+                    <button class="icon-btn" onclick="rosa.createTask()">+</button>
+                </div>
+                <div class="messages-area" id="tasks-content">
+                    <div class="loading">Загрузка...</div>
+                </div>
             </div>
-          </div>
-        </div>
-        <div class="new-project-modal" id="newProjectModal" style="display:none">
-          <div class="modal-card">
-            <h3>Новый проект</h3>
-            <input type="text" id="newProjectName" placeholder="Название" />
-            <textarea id="newProjectGoal" rows="2" placeholder="Цель..."></textarea>
-            <input type="date" id="newProjectDeadline" />
-            <div class="modal-actions">
-              <button class="btn-primary" id="btnCreateProject" onclick="createProject()">Создать</button>
-              <button class="btn-ghost" id="btnCancelProject" onclick="closeNewProjectModal()">Отмена</button>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- VIEW: IMPROVE -->
-      <div class="view" id="view-improve">
-        <div class="view-header">
-          <h2>✨ Самосовершенствование</h2>
-          <button class="btn-danger" id="btnOuroboros" onclick="runSelfImprove()">🐍 Уроборос</button>
-        </div>
-        <div class="improve-body">
-          <div class="quality-cards" id="qualityCards">
-            <div class="quality-card"><div class="quality-label">Полнота</div><div class="quality-bar-wrap"><div class="quality-bar" id="qBarCompleteness"></div></div><div class="quality-val" id="qValCompleteness">—</div></div>
-            <div class="quality-card"><div class="quality-label">Точность</div><div class="quality-bar-wrap"><div class="quality-bar" id="qBarAccuracy"></div></div><div class="quality-val" id="qValAccuracy">—</div></div>
-            <div class="quality-card"><div class="quality-label">Полезность</div><div class="quality-bar-wrap"><div class="quality-bar" id="qBarHelpfulness"></div></div><div class="quality-val" id="qValHelpfulness">—</div></div>
-            <div class="quality-card main"><div class="quality-label">Общая оценка</div><div class="quality-bar-wrap"><div class="quality-bar quality-bar-main" id="qBarOverall"></div></div><div class="quality-val" id="qValOverall">—</div></div>
-          </div>
-          <div class="weak-points-section">
-            <h3>Слабые места</h3>
-            <div id="weakPointsList" class="weak-tags"></div>
-          </div>
-          <div class="status-history-section">
-            <h3>История статусов</h3>
-            <div id="statusHistory" class="status-history-list"></div>
-            <button class="btn-secondary" id="btnLoadHistory" onclick="loadImproveView()">Загрузить</button>
-          </div>
-          <div class="improve-proposals">
-            <h3>Предложения по улучшению</h3>
-            <div id="proposalsList"></div>
-            <button class="btn-secondary" id="btnLoadProposals" onclick="loadProposals()">Загрузить предложения</button>
-          </div>
-        </div>
-      </div>
+            <!-- Code View -->
+            <div id="code-view" class="view">
+                <div class="chat-header">
+                    <div class="chat-title-wrapper">
+                        <div class="chat-title-main">💻 Редактор</div>
+                        <div class="chat-subtitle">Код и разработка</div>
+                    </div>
+                </div>
+                <div class="messages-area" id="code-content">
+                    <div class="code-workspace">
+                        <div class="code-sidebar glass-light">
+                            <div class="code-files">
+                                <div class="code-file active">main.py</div>
+                                <div class="code-file">core/app.py</div>
+                                <div class="code-file">api/chat.py</div>
+                            </div>
+                        </div>
+                        <div class="code-editor">
+                            <div class="code-toolbar">
+                                <button class="icon-btn" onclick="rosa.runCode()">▶️</button>
+                                <button class="icon-btn" onclick="rosa.saveCode()">💾</button>
+                            </div>
+                            <textarea class="code-textarea" placeholder="# Напиши код здесь..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
 
-      <!-- VIEW: SETTINGS -->
-      <div class="view" id="view-settings">
-        <div class="view-header"><h2>⚙️ Настройки</h2></div>
-        <div class="settings-body">
-          <div class="settings-section">
-            <h3>Модели</h3>
-            <div id="modelsList" class="models-grid"></div>
-          </div>
-          <div class="settings-section">
-            <h3>Интеграции</h3>
-            <div class="integration-row">
-              <span class="integration-label">🐙 GitHub</span>
-              <input type="text" id="githubUrl" placeholder="https://github.com/owner/repo" class="integration-input" />
-              <button class="btn-secondary" id="btnGithubIngest" onclick="ingestGitHub()">Загрузить</button>
-              <span class="integration-status" id="githubStatus"></span>
-            </div>
-            <div class="integration-row">
-              <span class="integration-label">🎵 TikTok</span>
-              <input type="text" id="tiktokUrl" placeholder="URL видео TikTok" class="integration-input" />
-              <button class="btn-secondary" id="btnTiktokAnalyze" onclick="analyzeTikTok()">Анализировать</button>
-              <span class="integration-status" id="tiktokStatus"></span>
-            </div>
-            <div class="integration-row">
-              <span class="integration-label">✈️ Telegram</span>
-              <input type="text" id="telegramChatId" placeholder="@username" class="integration-input" />
-              <button class="btn-secondary" id="btnTelegramImport" onclick="importTelegram()">Импортировать</button>
-              <span class="integration-status" id="telegramStatus"></span>
-            </div>
-          </div>
-          <div class="settings-section">
-            <h3>Экономика токенов</h3>
-            <div class="economy-stats" id="economyStats">
-              <div class="economy-row"><span>Сегодня ($)</span><span id="costToday">—</span></div>
-              <div class="economy-row"><span>Месяц ($)</span><span id="costMonth">—</span></div>
-              <div class="economy-row"><span>Кэш хиты</span><span id="cacheHits">—</span></div>
-            </div>
-            <button class="btn-secondary" id="btnEconomy">Обновить</button>
-          </div>
-          <div class="settings-section">
-            <h3>Система</h3>
-            <div class="system-actions">
-              <button class="btn-secondary" id="btnMacStatus" onclick="sendSuggestion('Покажи статус системы Mac')">💻 Статус Mac</button>
-              <button class="btn-secondary" id="btnBackup" onclick="createBackup()">💾 Бэкап</button>
-              <button class="btn-secondary" id="btnGitLog">📋 Git лог</button>
-            </div>
-            <div id="systemOutput" class="system-output"></div>
-          </div>
-        </div>
-      </div>
+        <!-- Right Panel -->
+        <aside class="right-panel glass">
+            <div class="panel-section">
+                <div class="panel-title">🔄 Самоулучшение</div>
+                
+                <div class="improve-card" onclick="rosa.selfImprove('analyze', this)">
+                    <div class="improve-card-header">
+                        <div class="improve-icon">🧠</div>
+                        <div class="improve-title">Анализ разговоров</div>
+                    </div>
+                    <div class="improve-desc">Извлечение инсайтов из истории</div>
+                </div>
 
-    </main>
-  </div>
+                <div class="improve-card" onclick="rosa.selfImprove('prompts', this)">
+                    <div class="improve-card-header">
+                        <div class="improve-icon">⚡</div>
+                        <div class="improve-title">Оптимизация</div>
+                    </div>
+                    <div class="improve-desc">Улучшение системных промптов</div>
+                </div>
 
-  <!-- SHORTCUTS MODAL -->
-  <div class="modal-overlay" id="shortcutsModal" style="display:none">
-    <div class="modal-card shortcuts-modal">
-      <h3>⌨️ Горячие клавиши</h3>
-      <div class="shortcuts-grid">
-        <span>Ctrl+N</span><span>Новый чат</span>
-        <span>Ctrl+K</span><span>Фокус поиска</span>
-        <span>Ctrl+Enter</span><span>Отправить</span>
-        <span>Shift+Enter</span><span>Новая строка</span>
-        <span>Esc</span><span>Стоп</span>
-        <span>Ctrl+/</span><span>Горячие клавиши</span>
-      </div>
-      <button class="btn-ghost" onclick="document.getElementById('shortcutsModal').style.display='none'">Закрыть</button>
+                <div class="improve-card" onclick="rosa.selfImprove('knowledge', this)">
+                    <div class="improve-card-header">
+                        <div class="improve-icon">📚</div>
+                        <div class="improve-title">Знания</div>
+                    </div>
+                    <div class="improve-desc">Обновление графа знаний</div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-title">📊 Метрики</div>
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <div class="metric-value" id="metric-messages">0</div>
+                        <div class="metric-label">Сообщений</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value" id="metric-sessions">0</div>
+                        <div class="metric-label">Сессий</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value" id="metric-uptime">0h</div>
+                        <div class="metric-label">Аптайм</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value" id="metric-improvements">0</div>
+                        <div class="metric-label">Улучшений</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Footer -->
+        <footer class="footer glass">
+            <div class="footer-left">
+                <div class="footer-item">
+                    <span>🌐</span>
+                    <span id="connection-status">Connected</span>
+                </div>
+                <div class="footer-item">
+                    <span>⚡</span>
+                    <span id="latency">-- ms</span>
+                </div>
+            </div>
+            <div>v5.0.0 Block 9</div>
+        </footer>
     </div>
-  </div>
 
-  <script src="/app/app.js"></script>
-  <script>
-    // Service Worker registration
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js").then((reg) => {
-          console.log("🌹 SW registered:", reg.scope);
-        }).catch((err) => console.warn("SW reg failed:", err));
-      });
-    }
-  </script>
-
-  <!-- Mission Plan Modal -->
-  <div class="modal-overlay" id="missionModal" style="display:none"></div>
-
-  <!-- Drag & Drop Overlay -->
-  <div id="dropOverlay" style="display:none;position:fixed;inset:0;background:rgba(16,163,127,.18);border:3px dashed #10a37f;z-index:9999;align-items:center;justify-content:center;font-size:2rem;color:#10a37f;pointer-events:none;">
-    📎 Отпустите файл для загрузки в ROSA
-  </div>
-
-  <!-- Ingest progress bar (bottom of page) -->
-  <div id="ingestProgress" style="position:fixed;bottom:60px;right:16px;width:280px;z-index:999;display:flex;flex-direction:column;gap:6px;pointer-events:none;"></div>
-
+    <script src="/app.js?v=1774460437"></script>
 </body>
 </html>

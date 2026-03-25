@@ -422,11 +422,13 @@ class RosaDesktop {
 
     // ==================== Self-Improvement ====================
 
-    async selfImprove(type) {
-        const btn = event.target;
-        const originalText = btn.textContent;
-        btn.textContent = '⏳ Выполняется...';
-        btn.disabled = true;
+    async selfImprove(type, btn = null) {
+        // accept btn directly from onclick(this); fallback gracefully
+        if (!btn && typeof event !== 'undefined' && event && event.currentTarget) {
+            btn = event.currentTarget;
+        }
+        const originalText = btn ? btn.textContent : '';
+        if (btn) { btn.textContent = '⏳ Выполняется...'; btn.disabled = true; }
         
         try {
             let endpoint = '/self-improve/';
@@ -472,8 +474,7 @@ class RosaDesktop {
                 isError: true
             });
         } finally {
-            btn.textContent = originalText;
-            btn.disabled = false;
+            if (btn) { btn.textContent = originalText; btn.disabled = false; }
         }
     }
 
