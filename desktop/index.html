@@ -864,7 +864,11 @@
                 <button class="nav-tab" data-view="code" onclick="rosa.switchView('code')">
                     <span>💻 Код</span>
                 </button>
-            </nav>
+            
+                <button class="nav-tab" data-view="permissions" onclick="rosa.switchView('permissions')" style="position:relative">
+                    <span>🔐 Разрешения</span>
+                    <span id="perm-badge" style="display:none;position:absolute;top:4px;right:4px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;min-width:14px;height:14px;border-radius:7px;align-items:center;justify-content:center;padding:0 3px">0</span>
+                </button></nav>
             
             <div class="system-info">
                 <div class="status-pill">
@@ -1000,6 +1004,24 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Permissions View -->
+            <div id="permissions-view" class="view" style="display:none">
+                <div class="messages-area" id="permissions-content" style="padding:16px;overflow-y:auto;max-height:calc(100vh - 120px)">
+                    <div style="font-size:18px;font-weight:700;margin-bottom:8px">🔐 Разрешения автономии</div>
+                    <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.5">
+                        Роза запрашивает разрешение перед важными действиями.<br>
+                        <span style="color:#f59e0b">🟡 Уровень 2</span> — изменение файлов, запуск скриптов &nbsp;|&nbsp;
+                        <span style="color:#ef4444">🔴 Уровень 3</span> — деплой, .env, перезапуск сервисов
+                    </div>
+                    <div id="perm-list">
+                        <div style="color:var(--text-tertiary);text-align:center;padding:32px">Нет ожидающих запросов</div>
+                    </div>
+                    <div style="margin-top:24px;border-top:1px solid rgba(255,255,255,0.1);padding-top:16px">
+                        <button onclick="rosa.loadPermissions()" style="background:rgba(255,255,255,0.1);border:none;border-radius:6px;padding:6px 14px;color:inherit;cursor:pointer;font-size:12px">🔄 Обновить</button>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <!-- Right Panel -->
@@ -1071,6 +1093,6 @@
         </footer>
     </div>
 
-    <script src="/app.js?v=1774460437"></script>
+    <script src="/app.js?v=1774464303"></script>
 </body>
 </html>

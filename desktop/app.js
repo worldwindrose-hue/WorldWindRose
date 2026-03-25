@@ -28,6 +28,9 @@ class RosaDesktop {
         
         // Auto-refresh metrics
         setInterval(() => this.updateMetrics(), 30000);
+        // Poll permissions every 10s
+        this.loadPermissions();
+        setInterval(() => this.loadPermissions(), 10000);
         
         console.log('🌹 Rosa Desktop initialized');
     }
@@ -93,6 +96,8 @@ class RosaDesktop {
         document.getElementById('memory-view').style.display = 'none';
         document.getElementById('tasks-view').style.display = 'none';
         document.getElementById('code-view').style.display = 'none';
+        const _pv = document.getElementById('permissions-view');
+        if (_pv) _pv.style.display = 'none';
         
         // Show selected view
         const viewMap = {
@@ -668,6 +673,66 @@ class RosaDesktop {
             });
         });
     }
+
+    // ==================== Permissions Panel ====================
+
+    async loadPermissions() {
+        try {
+            const pending = await this.api('/permissions/pending');
+            const badge = document.getElementById('perm-badge');
+            const list = document.getElementById('perm-list');
+            if (!badge || !list) return;
+
+            const count = Array.isArray(pending) ? pending.length : 0;
+            badge.textContent = count > 0 ? count : '';
+            badge.style.display = count > 0 ? 'inline-flex' : 'none';
+
+            if (count === 0) {
+                list.innerHTML = '<div style="color:var(--text-tertiary);padding:16px;text-align:center">Нет ожидающих запросов</div>';
+                return;
+            }
+
+            list.innerHTML = pending.map(p => {
+                const lvlColor = p.level === 3 ? '#ef4444' : p.level === 2 ? '#f59e0b' : '#22c55e';
+                const lvlLabel = p.level === 3 ? '🔴 Критический' : p.level === 2 ? '🟡 Средний' : '🟢 Безопасный';
+                const expires = new Date(p.expires_at).toLocaleTimeString('ru-RU');
+                return `<div class="perm-card" id="pcard-${p.id}">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                        <span style="font-size:11px;background:${lvlColor}20;color:${lvlColor};padding:2px 8px;border-radius:10px;font-weight:600">${lvlLabel}</span>
+                        <span style="font-size:11px;color:var(--text-tertiary)">до ${expires}</span>
+                    </div>
+                    <div style="font-weight:600;margin-bottom:4px">${p.action}</div>
+                    <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">${p.description}</div>
+                    <div style="display:flex;gap:8px">
+                        <button onclick="rosa.decidePermission('${p.id}', true)" style="flex:1;background:#22c55e;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:600">✅ Одобрить</button>
+                        <button onclick="rosa.decidePermission('${p.id}', false)" style="flex:1;background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:600">❌ Отклонить</button>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch (e) {
+            // silently ignore if not available
+        }
+    }
+
+    async decidePermission(id, confirmed) {
+        try {
+            const result = await this.api('/permissions/approve', {
+                method: 'POST',
+                body: JSON.stringify({ id, confirmed })
+            });
+            const card = document.getElementById('pcard-' + id);
+            if (card) {
+                card.style.opacity = '0.5';
+                card.querySelector('div:last-child').innerHTML =
+                    confirmed ? '<span style="color:#22c55e;font-weight:600">✅ Одобрено</span>'
+                              : '<span style="color:#ef4444;font-weight:600">❌ Отклонено</span>';
+            }
+            setTimeout(() => this.loadPermissions(), 800);
+        } catch (e) {
+            this.showToast('Ошибка: ' + e.message);
+        }
+    }
+
 }
 
 // Initialize
