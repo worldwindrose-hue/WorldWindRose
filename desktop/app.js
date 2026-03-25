@@ -336,6 +336,7 @@ function updateStatusBar(event) {
   const dot = $(".status-dot");
   const text = $(".status-text");
   const badge = $(".agent-badge");
+  const detailEl = $("#statusDetail");
 
   if (!dot || !text) return;
 
@@ -349,12 +350,37 @@ function updateStatusBar(event) {
   state.agentCount = agentCount;
 
   dot.className = `status-dot status-${color}`;
-  text.textContent = status + (detail ? ` — ${detail}` : "");
+  text.textContent = status;
+
+  // Show detailed status below the main status (for autonomous tasks)
+  if (detailEl) {
+    if (detail) {
+      detailEl.textContent = detail;
+      detailEl.style.display = "block";
+      // Auto-hide after 8s if status is ОНЛАЙН
+      if (status === "ОНЛАЙН" || status === "ONLINE") {
+        clearTimeout(detailEl._hideTimer);
+        detailEl._hideTimer = setTimeout(() => {
+          detailEl.style.display = "none";
+        }, 8000);
+      }
+    } else {
+      detailEl.style.display = "none";
+    }
+  } else {
+    // Fallback: append detail to text
+    if (detail) text.textContent += ` — ${detail}`;
+  }
 
   if (badge) {
     badge.style.display = agentCount > 0 ? "inline-flex" : "none";
-    badge.textContent = `${agentCount} агентов`;
+    badge.textContent = `🤖 ${agentCount} агент${agentCount > 1 ? "а" : ""}`;
   }
+}
+
+// Push a one-time status detail message (for smart parse / problem solver progress)
+function showStatusProgress(msg) {
+  updateStatusBar({ status: state.currentStatus || "СОВЕЩАЕТСЯ", detail: msg, color: "green", agent_count: 3 });
 }
 
 // ── CHAT: MESSAGES ────────────────────────────────────────────────────────
