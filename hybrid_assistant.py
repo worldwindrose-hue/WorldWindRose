@@ -72,9 +72,11 @@ class HybridRouter:
         self.memory = PersistentMemoryTool()
 
         # Cloud Brain (OpenRouter) client
+        import httpx
         self.cloud_client = AsyncOpenAI(
             base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
             api_key=os.getenv("OPENROUTER_API_KEY"),
+            timeout=httpx.Timeout(120.0, connect=10.0),
         )
         self.cloud_model = os.getenv("CLOUD_MODEL", "anthropic/claude-3.5-sonnet")
         
@@ -193,7 +195,7 @@ Always provide accurate, well-reasoned responses."""
                     {"role": "user", "content": user_input}
                 ],
                 temperature=0.7,
-                max_tokens=4000,
+                max_tokens=8000,
             )
             return response.choices[0].message.content or "No response received"
         except Exception as e:

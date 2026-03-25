@@ -42,11 +42,24 @@ async def chat(req: ChatRequest) -> ChatResponse:
     session_id = req.session_id or str(uuid.uuid4())
     rosa = get_router()
 
-    result = await rosa.chat(
-        message=req.message,
-        force_mode=req.mode,
-        session_id=session_id,
-    )
+    try:
+        result = await asyncio.wait_for(
+            rosa.chat(
+                message=req.message,
+                force_mode=req.mode,
+                session_id=session_id,
+            ),
+            timeout=115.0,
+        )
+    except asyncio.TimeoutError:
+        return ChatResponse(
+            response="⏱️ Запрос занял слишком много времени. Попробуй сократить вопрос или используй Local Brain.",
+            brain_used="timeout",
+            model="none",
+            task_type="timeout",
+            confidence=0.0,
+            session_id=session_id,
+        )
 
     # Persist to memory asynchronously (best-effort)
     try:

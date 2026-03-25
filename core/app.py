@@ -26,6 +26,7 @@ from core.api.self_improve import router as self_improve_router
 from core.api.sessions import router as sessions_router
 from core.api.folders import router as folders_router
 from core.api.files import router as files_router
+from core.api.permissions import router as permissions_router
 from core.api.voice import router as voice_router
 from core.api.parse_url import router as parse_url_router
 from core.api.knowledge import router as knowledge_router
@@ -212,6 +213,7 @@ def create_app() -> FastAPI:
     app.include_router(sessions_router)
     app.include_router(folders_router)
     app.include_router(files_router)
+    app.include_router(permissions_router)
     app.include_router(voice_router)
     app.include_router(parse_url_router)
     app.include_router(knowledge_router)
