@@ -33,6 +33,27 @@ class RosaRouter:
         os.environ.setdefault("LOCAL_MODEL", settings.local_model)
         self._router = _HybridRouter()
 
+    # Smart model routing
+    _COMPLEX_SIGNALS = [
+        'почему', 'объясни', 'сравни', 'проанализируй', 'напиши код', 'исправь',
+        'рефактор', 'архитектур', 'оптимизируй', 'реализуй', 'спроектируй',
+        'why', 'explain', 'compare', 'analyze', 'write code', 'refactor',
+        'architecture', 'optimize', 'implement', 'design', 'debug', 'review',
+    ]
+    _COMPLEX_LEN = 300
+
+    def _pick_model(self, message: str) -> str:
+        settings = get_settings()
+        msg_lower = message.lower()
+        is_complex = (
+            len(message) > self._COMPLEX_LEN
+            or any(sig in msg_lower for sig in self._COMPLEX_SIGNALS)
+        )
+        if is_complex:
+            return settings.cloud_fallback_model  # anthropic/claude-3.5-sonnet
+        return settings.cloud_model  # moonshotai/kimi-k2.5
+
+
     async def chat(
         self,
         message: str,
@@ -91,12 +112,15 @@ You are running inside ROSA OS. The owner can see your reasoning. Be honest."""
                 "session_id": session_id,
             }
         else:
+            model = self._pick_model(message)
+            self._router.cloud_model = model
             result = await self._router.process_task(message)
             classification: TaskClassification = result.get("classification")
+            actual_model = result.get("model") or model
             return {
                 "response": result["response"],
                 "brain_used": result["brain_used"],
-                "model": result["model"],
+                "model": actual_model,
                 "task_type": classification.task_type.value if classification else "unknown",
                 "confidence": classification.confidence if classification else 0.0,
                 "session_id": session_id,
