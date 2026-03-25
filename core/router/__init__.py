@@ -35,6 +35,31 @@ class RosaRouter:
         os.environ.setdefault("LOCAL_MODEL", settings.local_model)
         self._router = _HybridRouter()
 
+    _COMPLEX_SIGNALS = [
+        "pochemu", "objasnI", "compare", "analyze", "write code", "refactor",
+        "architecture", "optimize", "implement", "design", "debug", "review",
+        "explain", "why",
+    ]
+    _RUSSIAN = [
+        "почему", "объясни", "сравни", "проанализируй",
+        "напиши код", "исправь", "рефактор",
+        "архитектур", "оптимизируй", "реализуй", "спроектируй",
+    ]
+    _COMPLEX_LEN = 300
+
+    def _pick_model(self, message: str) -> str:
+        from core.config import get_settings
+        settings = get_settings()
+        msg_lower = message.lower()
+        all_sigs = self._COMPLEX_SIGNALS + self._RUSSIAN
+        is_complex = (
+            len(message) > self._COMPLEX_LEN
+            or any(sig in msg_lower for sig in all_sigs)
+        )
+        if is_complex:
+            return settings.cloud_fallback_model
+        return settings.cloud_model
+
     async def chat(
         self,
         message: str,
@@ -88,9 +113,10 @@ You are running inside ROSA OS. The owner can see your reasoning. Be honest."""
                 brain_used = "local"
                 model = self._router.local_model
             else:
+                model = self._pick_model(message)
+                self._router.cloud_model = model
                 response = await self._router.route_to_cloud_brain(message, cloud_system_prompt)
                 brain_used = "cloud"
-                model = self._router.cloud_model
 
             return {
                 "response": response,
