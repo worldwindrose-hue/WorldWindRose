@@ -120,11 +120,14 @@
           <div class="status-indicator">
             <span class="status-dot green" id="statusDot"></span>
             <span class="status-text" id="statusText">🌹 Роза онлайн</span>
+            <span class="agent-badge" style="display:none"></span>
           </div>
           <div class="status-agents" id="statusAgents" style="display:none">
             <span id="agentCount">0</span> агентов
           </div>
         </div>
+        <!-- DETAILED STATUS (shown during autonomous tasks) -->
+        <div id="statusDetail" style="display:none; font-size:11px; color:var(--text-muted,#888); padding:2px 16px 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; animation:fadeIn 0.3s;"></div>
 
         <!-- INPUT -->
         <div class="input-area">

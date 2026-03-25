@@ -52,9 +52,14 @@ class RememberIn(BaseModel):
 
 @router.get("/reflections", response_model=list[ReflectionOut])
 async def list_reflections(limit: int = 20) -> list[ReflectionOut]:
-    from core.memory.store import get_store
-    store = await get_store()
-    rows = await store.get_recent_reflections(limit=limit)
+    import asyncio
+    try:
+        from core.memory.store import get_store
+        store = await asyncio.wait_for(get_store(), timeout=5.0)
+        rows = await asyncio.wait_for(store.get_recent_reflections(limit=limit), timeout=5.0)
+    except Exception as exc:
+        logger.warning("list_reflections failed: %s", exc)
+        return []
     return [
         ReflectionOut(
             id=str(r.id),

@@ -85,3 +85,76 @@ async def git_status():
         "branch": gm.get_current_branch(),
         "changed_files": gm.get_changed_files(),
     }
+
+
+# ── Self-Deploy endpoints ────────────────────────────────────────────────────
+
+class DeployRequest(BaseModel):
+    branch: str = "claude/vigilant-almeida"
+    restart_service: bool = True
+
+
+@router.post("/git/pull")
+async def git_pull(req: DeployRequest):
+    """Pull latest code from GitHub and optionally restart the service."""
+    import subprocess, asyncio
+    results = {}
+
+    try:
+        # Stash any local changes
+        sp = subprocess.run(
+            ["git", "-C", "/opt/rosa", "stash"],
+            capture_output=True, text=True, timeout=30
+        )
+        results["stash"] = sp.stdout.strip() or sp.stderr.strip()
+
+        # Pull
+        sp = subprocess.run(
+            ["git", "-C", "/opt/rosa", "pull", "origin", req.branch],
+            capture_output=True, text=True, timeout=60
+        )
+        results["pull"] = sp.stdout.strip() + sp.stderr.strip()
+        results["returncode"] = sp.returncode
+
+        if req.restart_service and sp.returncode == 0:
+            # Restart in background (service restarts us so we can't await it)
+            subprocess.Popen(
+                ["systemctl", "restart", "rosa-assistant"],
+                start_new_session=True
+            )
+            results["restart"] = "queued"
+
+        return {"status": "ok", **results}
+    except Exception as exc:
+        raise HTTPException(500, str(exc))
+
+
+@router.post("/deploy/self")
+async def self_deploy():
+    """Full self-deploy: pull latest code + restart."""
+    return await git_pull(DeployRequest(restart_service=True))
+
+
+@router.post("/service/restart")
+async def restart_service():
+    """Restart the rosa-assistant systemd service."""
+    import subprocess
+    subprocess.Popen(["systemctl", "restart", "rosa-assistant"], start_new_session=True)
+    return {"status": "restart_queued", "message": "Service restart initiated"}
+
+
+@router.get("/service/status")
+async def service_status():
+    """Check systemd service status."""
+    import subprocess
+    sp = subprocess.run(
+        ["systemctl", "is-active", "rosa-assistant"],
+        capture_output=True, text=True
+    )
+    active = sp.stdout.strip()
+    sp2 = subprocess.run(
+        ["systemctl", "show", "rosa-assistant", "--property=MainPID,ActiveEnterTimestamp,MemoryCurrent"],
+        capture_output=True, text=True
+    )
+    props = dict(line.split("=", 1) for line in sp2.stdout.strip().splitlines() if "=" in line)
+    return {"active": active, "properties": props}

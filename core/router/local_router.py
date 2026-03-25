@@ -192,8 +192,16 @@ class LocalRouter:
         prompt = "\n".join(
             f"{m['role'].capitalize()}: {m['content']}" for m in messages
         )
+        # Pick best available local model: prefer rosa:latest, then llama3.2, etc.
+        preferred = ["rosa:latest", "llama3.2", "qwen2.5:3b", "qwen2.5:latest"]
+        try:
+            available = [m["name"] for m in (await ollama.AsyncClient().list()).get("models", [])]
+        except Exception:
+            available = []
+        model = next((m for m in preferred if m in available), None) or (available[0] if available else "llama3.2")
+        logger.info("Ollama routing to model: %s (available: %s)", model, available)
         response = await ollama.AsyncClient().generate(
-            model="llama3.2",
+            model=model,
             prompt=prompt,
         )
         return response.get("response", "")
