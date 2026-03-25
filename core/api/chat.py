@@ -23,8 +23,10 @@ router = APIRouter(prefix="/api", tags=["chat"])
 
 class ChatRequest(BaseModel):
     message: str
-    mode: str | None = None      # "cloud" | "local" | None (auto)
+    mode: str | None = None          # "cloud" | "local" | None (auto)
     session_id: str | None = None
+    file_content: str | None = None  # extracted text from uploaded file
+    file_name: str | None = None     # original filename for context
 
 
 class ChatResponse(BaseModel):
@@ -42,10 +44,22 @@ async def chat(req: ChatRequest) -> ChatResponse:
     session_id = req.session_id or str(uuid.uuid4())
     rosa = get_router()
 
+    # Merge file content into message if provided
+    effective_message = req.message
+    if req.file_content and req.file_content.strip():
+        fname = req.file_name or "file"
+        effective_message = f"[Файл: {fname}]\n\n{req.file_content}\n\n{req.message}" if req.message.strip() else f"[Файл: {fname}]\n\n{req.file_content}"
+    elif not effective_message.strip():
+        return ChatResponse(
+            response="⚠️ Получено пустое сообщение.",
+            brain_used="none", model="none", task_type="empty",
+            confidence=0.0, session_id=session_id,
+        )
+
     try:
         result = await asyncio.wait_for(
             rosa.chat(
-                message=req.message,
+                message=effective_message,
                 force_mode=req.mode,
                 session_id=session_id,
             ),
@@ -67,7 +81,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         store = await get_store()
         await store.save_turn(
             role="user",
-            content=req.message,
+            content=effective_message,
             session_id=session_id,
         )
         await store.save_turn(

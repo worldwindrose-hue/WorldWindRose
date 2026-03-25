@@ -324,6 +324,7 @@ class RosaDesktop {
             
         } catch (error) {
             this.hideTyping();
+            // Session preserved on error so next message keeps context
             
             // Check if it's an API key error
             const isAuthError = error.message.includes('401') || 
@@ -593,10 +594,16 @@ class RosaDesktop {
                 }
                 const data = await res.json();
                 this.hideTyping();
-                const prompt = '[File: ' + file.name + ']\n\n' + data.extracted_text;
+                const fileText = data.extracted_text || data.text || '';
                 const response = await this.api('/chat', {
                     method: 'POST',
-                    body: JSON.stringify({ message: prompt, session_id: this.currentSession, mode: this.mode })
+                    body: JSON.stringify({
+                        message: 'Проанализируй этот файл и расскажи что в нём.',
+                        file_content: fileText,
+                        file_name: file.name,
+                        session_id: this.currentSession,
+                        mode: this.mode
+                    })
                 });
                 if (response.session_id) this.currentSession = response.session_id;
                 this.addMessage({ role: 'assistant', content: response.response || 'File received.', timestamp: new Date().toISOString() });
