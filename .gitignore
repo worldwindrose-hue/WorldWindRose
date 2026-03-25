@@ -90,3 +90,7 @@ memory/logs/
 memory/uploads/
 memory/backups/
 experimental/
+
+# Runtime memory files
+memory/*.json
+memory/*.jsonl

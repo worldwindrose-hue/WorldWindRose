@@ -1,0 +1,43 @@
+FROM python:3.11-slim
+
+# System deps
+RUN apt-get update && apt-get install -y \
+    ffmpeg git curl build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python deps first (cache layer)
+COPY requirements.txt* ./
+RUN pip install --no-cache-dir \
+    fastapi uvicorn[standard] sqlalchemy aiosqlite \
+    openai pydantic-settings python-dotenv \
+    httpx rich beautifulsoup4 \
+    qrcode pillow pyngrok \
+    py_vapid pywebpush \
+    python-multipart \
+    2>/dev/null || true
+
+# Copy project (exclude runtime files)
+COPY . .
+RUN find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+RUN find . -name "*.pyc" -delete 2>/dev/null || true
+
+# Create non-root user
+RUN useradd -m -u 1000 rosa && \
+    mkdir -p /app/memory /app/memory/logs /app/memory/uploads && \
+    chown -R rosa:rosa /app
+
+USER rosa
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+ENV ROSA_MODE=cloud
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+EXPOSE 8000
+
+CMD ["uvicorn", "core.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
